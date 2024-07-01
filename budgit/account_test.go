@@ -13,7 +13,7 @@ func (s *budgitSuite) TestNewAccount() {
 		s.NoError(err, "expected account to have UUID ID")
 	})
 	s.Run("ReturnsAccountWithGivenBudgetID", func() {
-		expectedBudgetID := uuid.UUID{1}.String()
+		expectedBudgetID := "budgetID"
 		account := budgit.NewAccount(expectedBudgetID, "")
 		s.Equal(expectedBudgetID, account.BudgetID)
 	})
