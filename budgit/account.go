@@ -4,15 +4,15 @@ import "github.com/google/uuid"
 
 // Account is an Account, unique only within a given Budget.
 type Account struct {
-	ID       uuid.UUID
-	BudgetID uuid.UUID
+	ID       string
+	BudgetID string
 	Name     string
 }
 
 // NewAccount returns an Account in the given Budget.
-func NewAccount(budgetID uuid.UUID, name string) *Account {
+func NewAccount(budgetID, name string) *Account {
 	return &Account{
-		ID: uuid.New(),
+		ID: uuid.New().String(),
 		// TODO: check budget ID existence.
 		BudgetID: budgetID,
 		Name:     name,

@@ -5,7 +5,7 @@ import "github.com/google/uuid"
 
 // Budget is a single Budget used for tracking finances.
 type Budget struct {
-	ID       uuid.UUID
+	ID       string
 	Name     string
 	Currency Currency
 }
@@ -13,7 +13,7 @@ type Budget struct {
 // NewBudget returns a Budget.
 func NewBudget(name string, currency Currency) *Budget {
 	return &Budget{
-		ID:   uuid.New(),
+		ID:   uuid.New().String(),
 		Name: name,
 		// TODO: validate currency
 		Currency: currency,

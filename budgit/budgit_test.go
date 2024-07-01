@@ -20,7 +20,7 @@ func (s *budgitSuite) TestNewBudget() {
 	s.Run("ReturnsBudgetWithGeneratedUUID", func() {
 		budget := budgit.NewBudget("", "")
 		s.Require().NotEmpty(budget.ID, "expected budget to have non-empty ID")
-		_, err := uuid.Parse(budget.ID.String())
+		_, err := uuid.Parse(budget.ID)
 		s.NoError(err, "expected budget to have UUID ID")
 	})
 	s.Run("ReturnsBudgetWithGivenName", func() {
