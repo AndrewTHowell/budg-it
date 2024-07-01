@@ -13,8 +13,9 @@ type Budget struct {
 // NewBudget returns a Budget.
 func NewBudget(name string, currency Currency) *Budget {
 	return &Budget{
-		ID:       uuid.New(),
-		Name:     name,
+		ID:   uuid.New(),
+		Name: name,
+		// TODO: validate currency
 		Currency: currency,
 	}
 }
