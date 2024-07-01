@@ -18,19 +18,22 @@ type budgitSuite struct {
 
 func (s *budgitSuite) TestNewBudget() {
 	s.Run("ReturnsBudgetWithGeneratedUUID", func() {
-		budget := budgit.NewBudget("", "")
+		budget, err := budgit.NewBudget("", "")
+		s.NoError(err, "did not expect budget to error")
 		s.Require().NotEmpty(budget.ID, "expected budget to have non-empty ID")
-		_, err := uuid.Parse(budget.ID)
+		_, err = uuid.Parse(budget.ID)
 		s.NoError(err, "expected budget to have UUID ID")
 	})
 	s.Run("ReturnsBudgetWithGivenName", func() {
 		expectedName := "name"
-		budget := budgit.NewBudget(expectedName, "")
+		budget, err := budgit.NewBudget(expectedName, "")
+		s.NoError(err, "did not expect budget to error")
 		s.Equal(expectedName, budget.Name)
 	})
 	s.Run("ReturnsBudgetWithGivenCurrency", func() {
-		expectedCurrency := budgit.GBP
-		budget := budgit.NewBudget("", expectedCurrency)
+		expectedCurrency := "GBP"
+		budget, err := budgit.NewBudget("", expectedCurrency)
+		s.NoError(err, "did not expect budget to error")
 		s.Equal(expectedCurrency, budget.Currency)
 	})
 }

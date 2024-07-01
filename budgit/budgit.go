@@ -1,29 +1,28 @@
 // Package budgit is the domain package. It contains the domain objects for budgiting.
 package budgit
 
-import "github.com/google/uuid"
+import (
+	"fmt"
+
+	"github.com/google/uuid"
+)
+
+var (
+	ErrInvalidCurrency = fmt.Errorf("given currency is not valid")
+)
 
 // Budget is a single Budget used for tracking finances.
 type Budget struct {
 	ID       string
 	Name     string
-	Currency Currency
+	Currency string
 }
 
 // NewBudget returns a Budget.
-func NewBudget(name string, currency Currency) *Budget {
+func NewBudget(name, currency string) (*Budget, error) {
 	return &Budget{
-		ID:   uuid.New().String(),
-		Name: name,
-		// TODO: validate currency
+		ID:       uuid.New().String(),
+		Name:     name,
 		Currency: currency,
-	}
+	}, nil
 }
-
-// Currency denotes a currency.
-type Currency string
-
-const (
-	// GBP is the currency of the United Kingdom.
-	GBP = Currency("GBP")
-)
