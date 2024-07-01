@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/andrewthowell/budgit/budgit"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -18,7 +19,9 @@ type budgitSuite struct {
 func (s *budgitSuite) TestNewBudget() {
 	s.Run("ReturnsBudgetWithGeneratedUUID", func() {
 		budget := budgit.NewBudget("", "")
-		s.NotEmpty(budget.ID, "expected budget to have non-empty ID")
+		s.Require().NotEmpty(budget.ID, "expected budget to have non-empty ID")
+		_, err := uuid.Parse(budget.ID.String())
+		s.NoError(err, "expected budget to have UUID ID")
 	})
 	s.Run("ReturnsBudgetWithGivenName", func() {
 		expectedName := "name"
