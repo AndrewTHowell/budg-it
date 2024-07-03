@@ -4,11 +4,20 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
 
 	"github.com/andrewthowell/budgit/integrations/starling"
 	"github.com/joho/godotenv"
+	"github.com/kelseyhightower/envconfig"
 )
+
+type Config struct {
+	Starling Client `required:"true" envconfig:"starling"`
+}
+
+type Client struct {
+	URL      string `required:"true" envconfig:"url"`
+	APIToken string `required:"true" envconfig:"api_token"`
+}
 
 func main() {
 	err := godotenv.Load(".env")
@@ -16,13 +25,12 @@ func main() {
 		panic(err)
 	}
 
-	apiToken, ok := os.LookupEnv("API_TOKEN")
-	if !ok {
-		panic("Missing `API_TOKEN` env variable")
-	}
-	bearerToken := fmt.Sprintf("Bearer %s", apiToken)
+	config := &Config{}
+	envconfig.MustProcess("", config)
 
-	c, err := starling.NewClientWithResponses("https://api.starlingbank.com", starling.WithRequestEditorFn(func(ctx context.Context, req *http.Request) error {
+	bearerToken := fmt.Sprintf("Bearer %s", config.Starling.APIToken)
+
+	c, err := starling.NewClientWithResponses(config.Starling.URL, starling.WithRequestEditorFn(func(ctx context.Context, req *http.Request) error {
 		req.Header.Add("Authorization", bearerToken)
 		return nil
 	}))
