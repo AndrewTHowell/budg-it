@@ -7,7 +7,7 @@ A simple zero-based budgeting tool which aims to take the pain out of tracking y
 1. Start first integration with Bank
   - Test out the adaptor pattern required
   - Get used to OAuth
-  - Useful to see how Bank APIs have modeled their resources and APIs, copy good practices
+  - Useful to see how Bank APIs have modeled their resources and APIs, copy ~~good~~ (turns out, bank APIs kinda suck) practices
 2. Fill out remaining resources
   - Payee
   - Category
