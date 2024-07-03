@@ -3,9 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
-	"net/http"
 
-	"github.com/andrewthowell/budgit/integrations/starling"
+	"github.com/andrewthowell/budgit/budgit/clients"
 	"github.com/joho/godotenv"
 	"github.com/kelseyhightower/envconfig"
 )
@@ -25,21 +24,16 @@ func main() {
 		panic(err)
 	}
 
-	starlingClient, err := newStarlingClient(config.Starling)
+	starlingClient, err := clients.NewStarlingClient(config.Starling.URL, config.Starling.APIToken)
 	if err != nil {
 		panic(err)
 	}
 
-	resp, err := starlingClient.GetAccountsWithResponse(context.Background())
+	accounts, err := starlingClient.GetAccounts(context.Background())
 	if err != nil {
-		panic(fmt.Errorf("getting Accounts: %w", err))
+		panic(err)
 	}
-	if resp.JSON4XX != nil {
-		panic(fmt.Errorf("getting Accounts: %+v", resp.JSON4XX))
-	}
-	for _, account := range *resp.JSON200.Accounts {
-		fmt.Println(fmt.Sprintf("%+v", account))
-	}
+	fmt.Println(accounts)
 }
 
 func loadConfigFromEnv() (*Config, error) {
@@ -51,19 +45,4 @@ func loadConfigFromEnv() (*Config, error) {
 	config := &Config{}
 	envconfig.MustProcess("", config)
 	return config, nil
-}
-
-func newStarlingClient(config *ClientConfig) (*starling.ClientWithResponses, error) {
-	bearerToken := fmt.Sprintf("Bearer %s", config.APIToken)
-	client, err := starling.NewClientWithResponses(
-		config.URL,
-		starling.WithRequestEditorFn(func(ctx context.Context, req *http.Request) error {
-			req.Header.Add("Authorization", bearerToken)
-			return nil
-		}),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("initialising starling client: %w", err)
-	}
-	return client, nil
 }
