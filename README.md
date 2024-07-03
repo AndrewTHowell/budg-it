@@ -19,6 +19,7 @@ A simple zero-based budgeting tool which aims to take the pain out of tracking y
 6. Start zero-based budgeting logic
   - Assign funds to categories
   - Create targets
+7. Wrap this in Docker
 
 ## Contributors
 
