@@ -42,7 +42,22 @@ func (c Client) GetAccounts(ctx context.Context) ([]*budgit.ExternalAccount, err
 
 	accounts := make([]*budgit.ExternalAccount, 0, len(*resp.JSON200.Accounts))
 	for _, account := range *resp.JSON200.Accounts {
-		accounts = append(accounts, toAccount(&account))
+
+		resp, err := c.client.GetAccountBalanceWithResponse(ctx, *account.AccountUid)
+		if err != nil {
+			return nil, fmt.Errorf("getting Accounts: %w", err)
+		}
+		if resp.JSON4XX != nil {
+			return nil, fmt.Errorf("getting Accounts: %w", format4XXError(resp.JSON4XX))
+		}
+		accounts = append(accounts, budgit.NewExternalAccount(
+			account.AccountUid.String(),
+			providerStarling,
+			budgit.Balance{
+				ClearedBalance:   budgit.BalanceAmount(resp.JSON200.TotalClearedBalance.MinorUnits),
+				EffectiveBalance: budgit.BalanceAmount(resp.JSON200.TotalEffectiveBalance.MinorUnits),
+			},
+		))
 	}
 	return accounts, nil
 }
@@ -59,10 +74,6 @@ func (c Client) GetAccount(ctx context.Context, externalID string) (*budgit.Exte
 		return nil, ErrAccountNotFound
 	}
 	return accounts[idx], nil
-}
-
-func toAccount(starlingAccount *starling.AccountV2) *budgit.ExternalAccount {
-	return budgit.NewExternalAccount(providerStarling, starlingAccount.AccountUid.String())
 }
 
 func format4XXError(errResp *starling.ErrorResponse) error {

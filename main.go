@@ -33,7 +33,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(accounts)
+	fmt.Println(fmt.Sprintf("%+v", accounts[0]))
 }
 
 func loadConfigFromEnv() (*Config, error) {

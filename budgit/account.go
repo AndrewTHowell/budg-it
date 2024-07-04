@@ -1,6 +1,8 @@
 package budgit
 
-import "github.com/google/uuid"
+import (
+	"github.com/google/uuid"
+)
 
 // Account is an Account, unique only within a given Budget.
 type Account struct {
@@ -24,13 +26,15 @@ type ExternalAccount struct {
 	ID               string
 	ExternalID       string
 	ExternalProvider string
+	Balance          Balance
 }
 
 // NewExternalAccount returns an ExternalAccount.
-func NewExternalAccount(externalID, externalProvider string) *ExternalAccount {
+func NewExternalAccount(externalID, externalProvider string, balance Balance) *ExternalAccount {
 	return &ExternalAccount{
 		ID:               uuid.New().String(),
 		ExternalID:       externalID,
 		ExternalProvider: externalProvider,
+		Balance:          balance,
 	}
 }
