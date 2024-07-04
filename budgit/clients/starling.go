@@ -51,8 +51,9 @@ func (c Client) GetAccounts(ctx context.Context) ([]*budgit.ExternalAccount, err
 			return nil, fmt.Errorf("getting Accounts: %w", format4XXError(resp.JSON4XX))
 		}
 		accounts = append(accounts, budgit.NewExternalAccount(
-			account.AccountUid.String(),
 			providerStarling,
+			account.AccountUid.String(),
+			*account.Name,
 			budgit.Balance{
 				ClearedBalance:   budgit.BalanceAmount(resp.JSON200.TotalClearedBalance.MinorUnits),
 				EffectiveBalance: budgit.BalanceAmount(resp.JSON200.TotalEffectiveBalance.MinorUnits),

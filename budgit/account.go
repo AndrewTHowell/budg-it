@@ -24,17 +24,19 @@ func NewAccount(budgetID, name string) *Account {
 // ExternalAccount is an Account representing some real, external Account.
 type ExternalAccount struct {
 	ID               string
-	ExternalID       string
 	ExternalProvider string
+	ExternalID       string
+	Name             string
 	Balance          Balance
 }
 
 // NewExternalAccount returns an ExternalAccount.
-func NewExternalAccount(externalID, externalProvider string, balance Balance) *ExternalAccount {
+func NewExternalAccount(externalProvider, externalID, name string, balance Balance) *ExternalAccount {
 	return &ExternalAccount{
 		ID:               uuid.New().String(),
-		ExternalID:       externalID,
 		ExternalProvider: externalProvider,
+		ExternalID:       externalID,
+		Name:             name,
 		Balance:          balance,
 	}
 }
