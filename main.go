@@ -19,6 +19,12 @@ type ClientConfig struct {
 	APIToken string `required:"true" envconfig:"api_token"`
 }
 
+type Provider interface {
+	ID() string
+	GetExternalAccounts(ctx context.Context) ([]*budgit.ExternalAccount, error)
+	GetExternalAccount(ctx context.Context, externalID string) (*budgit.ExternalAccount, error)
+}
+
 func main() {
 	config, err := loadConfigFromEnv()
 	if err != nil {
@@ -47,9 +53,4 @@ func loadConfigFromEnv() (*Config, error) {
 	config := &Config{}
 	envconfig.MustProcess("", config)
 	return config, nil
-}
-
-type Provider interface {
-	GetExternalAccounts(ctx context.Context) ([]*budgit.ExternalAccount, error)
-	GetExternalAccount(ctx context.Context, externalID string) (*budgit.ExternalAccount, error)
 }

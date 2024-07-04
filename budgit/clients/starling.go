@@ -31,6 +31,8 @@ func NewStarlingClient(url, apiToken string) (*Client, error) {
 	return &Client{client: client}, nil
 }
 
+func (c Client) ID() string { return providerStarling }
+
 func (c Client) GetExternalAccounts(ctx context.Context) ([]*budgit.ExternalAccount, error) {
 	resp, err := c.client.GetAccountsWithResponse(ctx)
 	if err != nil {
