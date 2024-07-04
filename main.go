@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/andrewthowell/budgit/budgit"
 	"github.com/andrewthowell/budgit/budgit/clients"
 	"github.com/joho/godotenv"
 	"github.com/kelseyhightower/envconfig"
@@ -24,12 +25,13 @@ func main() {
 		panic(err)
 	}
 
-	starlingClient, err := clients.NewStarlingClient(config.Starling.URL, config.Starling.APIToken)
+	var provider Provider
+	provider, err = clients.NewStarlingClient(config.Starling.URL, config.Starling.APIToken)
 	if err != nil {
 		panic(err)
 	}
 
-	accounts, err := starlingClient.GetAccounts(context.Background())
+	accounts, err := provider.GetAccounts(context.Background())
 	if err != nil {
 		panic(err)
 	}
@@ -45,4 +47,9 @@ func loadConfigFromEnv() (*Config, error) {
 	config := &Config{}
 	envconfig.MustProcess("", config)
 	return config, nil
+}
+
+type Provider interface {
+	GetAccounts(ctx context.Context) ([]*budgit.ExternalAccount, error)
+	GetAccount(ctx context.Context, externalID string) (*budgit.ExternalAccount, error)
 }
