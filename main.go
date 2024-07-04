@@ -31,7 +31,7 @@ func main() {
 		panic(err)
 	}
 
-	accounts, err := provider.GetAccounts(context.Background())
+	accounts, err := provider.GetExternalAccounts(context.Background())
 	if err != nil {
 		panic(err)
 	}
@@ -50,6 +50,6 @@ func loadConfigFromEnv() (*Config, error) {
 }
 
 type Provider interface {
-	GetAccounts(ctx context.Context) ([]*budgit.ExternalAccount, error)
-	GetAccount(ctx context.Context, externalID string) (*budgit.ExternalAccount, error)
+	GetExternalAccounts(ctx context.Context) ([]*budgit.ExternalAccount, error)
+	GetExternalAccount(ctx context.Context, externalID string) (*budgit.ExternalAccount, error)
 }

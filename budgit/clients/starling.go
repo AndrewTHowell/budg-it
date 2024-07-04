@@ -31,7 +31,7 @@ func NewStarlingClient(url, apiToken string) (*Client, error) {
 	return &Client{client: client}, nil
 }
 
-func (c Client) GetAccounts(ctx context.Context) ([]*budgit.ExternalAccount, error) {
+func (c Client) GetExternalAccounts(ctx context.Context) ([]*budgit.ExternalAccount, error) {
 	resp, err := c.client.GetAccountsWithResponse(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("getting Accounts: %w", err)
@@ -63,8 +63,8 @@ func (c Client) GetAccounts(ctx context.Context) ([]*budgit.ExternalAccount, err
 	return accounts, nil
 }
 
-func (c Client) GetAccount(ctx context.Context, externalID string) (*budgit.ExternalAccount, error) {
-	accounts, err := c.GetAccounts(ctx)
+func (c Client) GetExternalAccount(ctx context.Context, externalID string) (*budgit.ExternalAccount, error) {
+	accounts, err := c.GetExternalAccounts(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("getting Account %q: %w", externalID, err)
 	}
