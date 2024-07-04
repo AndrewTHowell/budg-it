@@ -11,7 +11,7 @@ import (
 	"github.com/andrewthowell/budgit/integrations/starling"
 )
 
-const providerStarling = "starling"
+const providerStarling = "Starling"
 
 type Client struct {
 	client *starling.ClientWithResponses

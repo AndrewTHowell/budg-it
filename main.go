@@ -4,8 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/andrewthowell/budgit/budgit"
 	"github.com/andrewthowell/budgit/budgit/clients"
+	"github.com/andrewthowell/budgit/budgit/db"
+	"github.com/andrewthowell/budgit/budgit/svc"
 	"github.com/joho/godotenv"
 	"github.com/kelseyhightower/envconfig"
 )
@@ -19,29 +20,25 @@ type ClientConfig struct {
 	APIToken string `required:"true" envconfig:"api_token"`
 }
 
-type Provider interface {
-	ID() string
-	GetExternalAccounts(ctx context.Context) ([]*budgit.ExternalAccount, error)
-	GetExternalAccount(ctx context.Context, externalID string) (*budgit.ExternalAccount, error)
-}
-
 func main() {
 	config, err := loadConfigFromEnv()
 	if err != nil {
 		panic(err)
 	}
 
-	var provider Provider
-	provider, err = clients.NewStarlingClient(config.Starling.URL, config.Starling.APIToken)
+	budgetID := "main"
+
+	starlingClient, err := clients.NewStarlingClient(config.Starling.URL, config.Starling.APIToken)
 	if err != nil {
 		panic(err)
 	}
 
-	accounts, err := provider.GetExternalAccounts(context.Background())
-	if err != nil {
+	db := db.New()
+	service := svc.New(db)
+
+	if err = service.LoadAccountsFromProvider(context.Background(), starlingClient, budgetID); err != nil {
 		panic(err)
 	}
-	fmt.Println(fmt.Sprintf("%+v", accounts[0]))
 }
 
 func loadConfigFromEnv() (*Config, error) {
