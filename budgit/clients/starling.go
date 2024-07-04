@@ -5,10 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 
 	"github.com/andrewthowell/budgit/budgit"
 	"github.com/andrewthowell/budgit/integrations/starling"
 )
+
+const providerStarling = "starling"
 
 type Client struct {
 	client *starling.ClientWithResponses
@@ -28,8 +31,7 @@ func NewStarlingClient(url, apiToken string) (*Client, error) {
 	return &Client{client: client}, nil
 }
 
-func (c Client) GetAccounts(ctx context.Context) ([]*starling.AccountV2, error) {
-
+func (c Client) GetAccounts(ctx context.Context) ([]*budgit.ExternalAccount, error) {
 	resp, err := c.client.GetAccountsWithResponse(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("getting Accounts: %w", err)
@@ -38,15 +40,29 @@ func (c Client) GetAccounts(ctx context.Context) ([]*starling.AccountV2, error) 
 		return nil, fmt.Errorf("getting Accounts: %w", format4XXError(resp.JSON4XX))
 	}
 
+	accounts := make([]*budgit.ExternalAccount, 0, len(*resp.JSON200.Accounts))
 	for _, account := range *resp.JSON200.Accounts {
-		fmt.Println(fmt.Sprintf("%+v", account))
+		accounts = append(accounts, toAccount(&account))
 	}
-	return nil, nil
+	return accounts, nil
 }
 
-func toAccount(starlingAccount *starling.AccountV2) (*budgit.Account, error) {
-	acct := budgit.NewAccount("", "")
-	return acct, nil
+func (c Client) GetAccount(ctx context.Context, externalID string) (*budgit.ExternalAccount, error) {
+	accounts, err := c.GetAccounts(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("getting Account %q: %w", externalID, err)
+	}
+	idx := slices.IndexFunc(accounts, func(a *budgit.ExternalAccount) bool {
+		return a.ExternalID == externalID
+	})
+	if idx == -1 {
+		return nil, ErrAccountNotFound
+	}
+	return accounts[idx], nil
+}
+
+func toAccount(starlingAccount *starling.AccountV2) *budgit.ExternalAccount {
+	return budgit.NewExternalAccount(providerStarling, starlingAccount.AccountUid.String())
 }
 
 func format4XXError(errResp *starling.ErrorResponse) error {
