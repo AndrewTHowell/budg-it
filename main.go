@@ -34,9 +34,9 @@ func main() {
 	}
 
 	db := db.New()
-	service := svc.New(db)
+	service := svc.New(db, map[string]svc.Provider{starlingClient.ID(): starlingClient})
 
-	if err = service.LoadAccountsFromProvider(context.Background(), starlingClient, budgetID); err != nil {
+	if err = service.LoadAccountsFromProvider(context.Background(), budgetID, starlingClient.ID()); err != nil {
 		panic(err)
 	}
 }
