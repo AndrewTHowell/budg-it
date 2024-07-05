@@ -37,7 +37,7 @@ func (s Service) LoadAccountsFromProvider(ctx context.Context, provider Provider
 	accounts := make([]*budgit.Account, 0, len(externalAccounts))
 	for _, externalAccount := range externalAccounts {
 		name := fmt.Sprintf("%s - %s", externalAccount.ExternalProviderID, externalAccount.Name)
-		accounts = append(accounts, budgit.NewAccount(budgetID, name, externalAccount.ID))
+		accounts = append(accounts, budgit.NewAccount(budgetID, name, externalAccount.ID, externalAccount.Balance))
 	}
 
 	if err := s.db.InsertAccounts(ctx, accounts); err != nil {

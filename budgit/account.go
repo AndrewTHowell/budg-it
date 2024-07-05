@@ -10,16 +10,18 @@ type Account struct {
 	BudgetID          string
 	Name              string
 	ExternalAccountID string
+	Balance           Balance
 }
 
 // NewAccount returns an Account in the given Budget.
-func NewAccount(budgetID, name, externalAccountID string) *Account {
+func NewAccount(budgetID, name, externalAccountID string, balance Balance) *Account {
 	return &Account{
 		ID: uuid.New().String(),
 		// TODO: check budget ID existence.
 		BudgetID:          budgetID,
 		Name:              name,
 		ExternalAccountID: externalAccountID,
+		Balance:           balance,
 	}
 }
 
