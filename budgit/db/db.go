@@ -10,6 +10,7 @@ type DB struct {
 	accounts         []*budgit.Account
 	externalAccounts []*budgit.ExternalAccount
 	transactions     []*budgit.Transaction
+	payees           []*budgit.Payee
 }
 
 func New() *DB {
@@ -17,6 +18,7 @@ func New() *DB {
 		accounts:         []*budgit.Account{},
 		externalAccounts: []*budgit.ExternalAccount{},
 		transactions:     []*budgit.Transaction{},
+		payees:           []*budgit.Payee{},
 	}
 }
 
@@ -39,7 +41,18 @@ func insert[I idGetter](slice *[]*I, elems ...*I) error {
 	return nil
 }
 
-func selectByID[I idGetter](slice []*I, id string, notFoundError error) (*I, error) {
+func selectByIDs[I idGetter](slice []*I, ids []string) map[string]*I {
+	elems := make(map[string]*I, len(ids))
+	for _, id := range ids {
+		elem := selectByID(slice, id)
+		if elem != nil {
+			elems[(*elem).GetID()] = elem
+		}
+	}
+	return elems
+}
+
+func selectByID[I idGetter](slice []*I, id string) *I {
 	idx, ok := slices.BinarySearchFunc(slice, id, func(elem *I, targetID string) int {
 		if (*elem).GetID() < targetID {
 			return -1
@@ -50,7 +63,15 @@ func selectByID[I idGetter](slice []*I, id string, notFoundError error) (*I, err
 		return 1
 	})
 	if !ok {
-		return nil, notFoundError
+		return nil
 	}
-	return slice[idx], nil
+	return slice[idx]
+}
+
+func boolMap[E comparable](slice []E) map[E]bool {
+	m := make(map[E]bool, len(slice))
+	for _, e := range slice {
+		m[e] = true
+	}
+	return m
 }

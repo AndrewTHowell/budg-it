@@ -40,17 +40,27 @@ type AccountSyncError struct {
 }
 
 func (e AccountSyncError) Error() string {
-	return fmt.Sprintf("Syncing Account %q failed, balance synced from external account %+v does not match balance of internal account %+v", e.AccountName, e.ExternalBalance, e.InternalBalance)
+	return fmt.Sprintf("syncing Account %q failed, balance synced from external account %+v does not match balance of internal account %+v", e.AccountName, e.ExternalBalance, e.InternalBalance)
 }
 
+var ErrAccountNotFound = fmt.Errorf("the requested Account does not exist")
+
 func (s Service) SyncAccount(ctx context.Context, accountID string) error {
-	account, err := s.db.SelectAccountByID(ctx, accountID)
+	accounts, err := s.db.SelectAccountsByID(ctx, accountID)
 	if err != nil {
 		return fmt.Errorf("syncing account %q: %w", accountID, err)
 	}
-	currentExternalAccount, err := s.db.SelectExternalAccountByID(ctx, account.ExternalAccountID)
+	account, ok := accounts[accountID]
+	if !ok {
+		return fmt.Errorf("syncing account %q: %w", accountID, ErrAccountNotFound)
+	}
+	currentExternalAccounts, err := s.db.SelectExternalAccountsByID(ctx, account.ExternalAccountID)
 	if err != nil {
 		return fmt.Errorf("syncing account %q: %w", accountID, err)
+	}
+	currentExternalAccount, ok := currentExternalAccounts[account.ExternalAccountID]
+	if !ok {
+		return fmt.Errorf("syncing account %q: account references external account %q which does not exist", accountID, account.ExternalAccountID)
 	}
 	externalAccount, err := s.providers[currentExternalAccount.ExternalProviderID].GetExternalAccount(ctx, account.ExternalAccountID)
 	if err != nil {
