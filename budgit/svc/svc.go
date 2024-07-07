@@ -33,10 +33,10 @@ type Provider interface {
 	GetExternalAccount(ctx context.Context, externalID string) (*budgit.ExternalAccount, error)
 }
 
-func (s Service) LoadAccountsFromProvider(ctx context.Context, budgetID, providerID string) error {
+func (s Service) LoadAccountsFromProvider(ctx context.Context, budgetID, providerID string) ([]*budgit.Account, []*budgit.ExternalAccount, error) {
 	externalAccounts, err := s.providers[providerID].GetExternalAccounts(ctx)
 	if err != nil {
-		return fmt.Errorf("loading accounts from %q: %w", providerID, err)
+		return nil, nil, fmt.Errorf("loading accounts from %q: %w", providerID, err)
 	}
 
 	accounts := make([]*budgit.Account, 0, len(externalAccounts))
@@ -46,12 +46,12 @@ func (s Service) LoadAccountsFromProvider(ctx context.Context, budgetID, provide
 	}
 
 	if err := s.db.InsertAccounts(ctx, accounts...); err != nil {
-		return fmt.Errorf("loading accounts from %q: %w", providerID, err)
+		return nil, nil, fmt.Errorf("loading accounts from %q: %w", providerID, err)
 	}
 	if err := s.db.InsertExternalAccounts(ctx, externalAccounts...); err != nil {
-		return fmt.Errorf("loading accounts from %q: %w", providerID, err)
+		return nil, nil, fmt.Errorf("loading accounts from %q: %w", providerID, err)
 	}
-	return nil
+	return accounts, externalAccounts, nil
 }
 
 type AccountSyncError struct {

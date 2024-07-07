@@ -36,8 +36,17 @@ func main() {
 	db := db.New()
 	service := svc.New(db, map[string]svc.Provider{starlingClient.ID(): starlingClient})
 
-	if err = service.LoadAccountsFromProvider(context.Background(), budgetID, starlingClient.ID()); err != nil {
+	accounts, externalAccounts, err := service.LoadAccountsFromProvider(context.Background(), budgetID, starlingClient.ID())
+	if err != nil {
 		panic(err)
+	}
+	fmt.Println(len(accounts), "accounts")
+	for _, account := range accounts {
+		fmt.Println(fmt.Sprintf("%+v", account))
+	}
+	fmt.Println(len(externalAccounts), "externalAccounts")
+	for _, account := range externalAccounts {
+		fmt.Println(fmt.Sprintf("%+v", account))
 	}
 }
 
