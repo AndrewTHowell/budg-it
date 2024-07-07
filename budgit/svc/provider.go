@@ -13,7 +13,7 @@ type Provider interface {
 	GetExternalAccount(ctx context.Context, externalID string) (*budgit.ExternalAccount, error)
 }
 
-func (s Service) LoadAccountsFromProvider(ctx context.Context, budgetID, providerID string) ([]*budgit.Account, []*budgit.ExternalAccount, error) {
+func (s Service) LoadAccountsFromProvider(ctx context.Context, providerID string) ([]*budgit.Account, []*budgit.ExternalAccount, error) {
 	externalAccounts, err := s.providers[providerID].GetExternalAccounts(ctx)
 	if err != nil {
 		return nil, nil, fmt.Errorf("loading accounts from %q: %w", providerID, err)
@@ -22,7 +22,7 @@ func (s Service) LoadAccountsFromProvider(ctx context.Context, budgetID, provide
 	accounts := make([]*budgit.Account, 0, len(externalAccounts))
 	for _, externalAccount := range externalAccounts {
 		name := fmt.Sprintf("%s - %s", externalAccount.ExternalProviderID, externalAccount.Name)
-		accounts = append(accounts, budgit.NewAccount(budgetID, name, externalAccount.ID, externalAccount.Balance))
+		accounts = append(accounts, budgit.NewAccount(name, externalAccount.ID, externalAccount.Balance))
 	}
 
 	if err := s.db.InsertAccounts(ctx, accounts...); err != nil {
@@ -43,7 +43,7 @@ func (e AccountSyncError) Error() string {
 	return fmt.Sprintf("Syncing Account %q failed, balance synced from external account %+v does not match balance of internal account %+v", e.AccountName, e.ExternalBalance, e.InternalBalance)
 }
 
-func (s Service) SyncAccount(ctx context.Context, budgetID, accountID string) error {
+func (s Service) SyncAccount(ctx context.Context, accountID string) error {
 	account, err := s.db.SelectAccountByID(ctx, accountID)
 	if err != nil {
 		return fmt.Errorf("syncing account %q: %w", accountID, err)

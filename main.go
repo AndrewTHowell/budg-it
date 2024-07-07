@@ -26,8 +26,6 @@ func main() {
 		panic(err)
 	}
 
-	budgetID := "main"
-
 	starlingClient, err := clients.NewStarlingClient(config.Starling.URL, config.Starling.APIToken)
 	if err != nil {
 		panic(err)
@@ -36,7 +34,7 @@ func main() {
 	db := db.New()
 	service := svc.New(db, map[string]svc.Provider{starlingClient.ID(): starlingClient})
 
-	accounts, externalAccounts, err := service.LoadAccountsFromProvider(context.Background(), budgetID, starlingClient.ID())
+	accounts, externalAccounts, err := service.LoadAccountsFromProvider(context.Background(), starlingClient.ID())
 	if err != nil {
 		panic(err)
 	}
