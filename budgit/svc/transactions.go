@@ -27,6 +27,8 @@ func (s Service) CreateTransactions(ctx context.Context, transactions ...*budgit
 	if err := s.db.InsertTransactions(ctx, transactions...); err != nil {
 		return nil, fmt.Errorf("creating transactions: %w", err)
 	}
+	// Update Account/Category Balances
+
 	return transactions, nil
 }
 
