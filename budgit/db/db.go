@@ -37,6 +37,10 @@ func (db *DB) SelectAccountByID(ctx context.Context, accountID string) (*budgit.
 	return account, nil
 }
 
+func (db *DB) SelectAccounts(ctx context.Context) ([]*budgit.Account, error) {
+	return db.accounts, nil
+}
+
 func (db *DB) InsertExternalAccounts(ctx context.Context, externalAccounts ...*budgit.ExternalAccount) error {
 	if err := insert(&db.externalAccounts, externalAccounts...); err != nil {
 		return fmt.Errorf("inserting %d external accounts: %w", len(externalAccounts), err)
@@ -52,6 +56,10 @@ func (db *DB) SelectExternalAccountByID(ctx context.Context, externalAccountID s
 		return nil, fmt.Errorf("selecting external account by ID %q: %w", externalAccountID, err)
 	}
 	return externalAccount, nil
+}
+
+func (db *DB) SelectExternalAccounts(ctx context.Context) ([]*budgit.ExternalAccount, error) {
+	return db.externalAccounts, nil
 }
 
 type idGetter interface {
