@@ -21,7 +21,7 @@ func New() *DB {
 }
 
 func (db *DB) InsertAccounts(ctx context.Context, accounts ...*budgit.Account) error {
-	if err := insert(db.accounts, accounts...); err != nil {
+	if err := insert(&db.accounts, accounts...); err != nil {
 		return fmt.Errorf("inserting %d accounts: %w", len(accounts), err)
 	}
 	return nil
@@ -38,7 +38,7 @@ func (db *DB) SelectAccountByID(ctx context.Context, accountID string) (*budgit.
 }
 
 func (db *DB) InsertExternalAccounts(ctx context.Context, externalAccounts ...*budgit.ExternalAccount) error {
-	if err := insert(db.externalAccounts, externalAccounts...); err != nil {
+	if err := insert(&db.externalAccounts, externalAccounts...); err != nil {
 		return fmt.Errorf("inserting %d external accounts: %w", len(externalAccounts), err)
 	}
 	return nil
@@ -58,17 +58,17 @@ type idGetter interface {
 	GetID() string
 }
 
-func insert[I idGetter](slice []*I, elems ...*I) error {
-	slice = slices.Grow(slice, len(elems))
+func insert[I idGetter](slice *[]*I, elems ...*I) error {
+	*slice = slices.Grow(*slice, len(elems))
 	for _, elem := range elems {
-		idx := slices.IndexFunc(slice, func(i *I) bool {
+		idx := slices.IndexFunc(*slice, func(i *I) bool {
 			return (*elem).GetID() < (*i).GetID()
 		})
 		if idx != -1 {
-			slice = slices.Insert(slice, idx, elem)
+			*slice = slices.Insert(*slice, idx, elem)
 		}
 		// If no index can be found where given element has lesser ID, element has the greatest ID and belongs at the end.
-		slice = append(slice, elem)
+		*slice = append(*slice, elem)
 	}
 	return nil
 }
