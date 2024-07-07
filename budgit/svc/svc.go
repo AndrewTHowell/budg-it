@@ -14,6 +14,8 @@ type DB interface {
 	InsertExternalAccounts(ctx context.Context, externalAccounts ...*budgit.ExternalAccount) error
 	SelectExternalAccountByID(ctx context.Context, externalAccountID string) (*budgit.ExternalAccount, error)
 	SelectExternalAccounts(ctx context.Context) ([]*budgit.ExternalAccount, error)
+
+	TransactionDB
 }
 
 type Service struct {

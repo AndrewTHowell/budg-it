@@ -30,3 +30,7 @@ func NewTransaction(budgetID, accountID string, date date.Date, payeeID, categor
 		Amount:     amount,
 	}
 }
+
+func (t Transaction) GetID() string {
+	return t.ID
+}
