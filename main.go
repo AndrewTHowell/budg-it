@@ -7,11 +7,13 @@ import (
 	"github.com/andrewthowell/budgit/budgit/clients"
 	"github.com/andrewthowell/budgit/budgit/db"
 	"github.com/andrewthowell/budgit/budgit/svc"
+	"github.com/jackc/pgx/v5"
 	"github.com/joho/godotenv"
 	"github.com/kelseyhightower/envconfig"
 )
 
 type Config struct {
+	DB       *DBConfig     `required:"true" envconfig:"db"`
 	Starling *ClientConfig `required:"true" envconfig:"starling"`
 }
 
@@ -20,11 +22,31 @@ type ClientConfig struct {
 	APIToken string `required:"true" envconfig:"api_token"`
 }
 
+type DBConfig struct {
+	User     string `required:"true" envconfig:"user"`
+	Password string `required:"true" envconfig:"password"`
+	Host     string `required:"true" envconfig:"host"`
+	Port     string `required:"true" envconfig:"port"`
+}
+
 func main() {
 	config, err := loadConfigFromEnv()
 	if err != nil {
 		panic(err)
 	}
+
+	url := fmt.Sprintf("postgres://%s:%s@%s:%s", config.DB.User, config.DB.Password, config.DB.Host, config.DB.Port)
+	conn, err := pgx.Connect(context.Background(), url)
+	if err != nil {
+		panic(err)
+	}
+	defer conn.Close(context.Background())
+
+	tag, err := conn.Exec(context.Background(), `select * from accounts`)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(tag)
 
 	starlingClient, err := clients.NewStarlingClient(config.Starling.URL, config.Starling.APIToken)
 	if err != nil {
