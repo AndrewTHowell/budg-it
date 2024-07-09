@@ -1,13 +1,35 @@
 services:
   postgres:
     image: postgres:16-alpine
+    restart: unless-stopped
+    env_file: ".env"
     networks:
-      - postgres
+      new:
+        aliases:
+          - database
     ports:
-      - 5432:5432
+      - $POSTGRES_PORT:5432
     volumes:
       - ~/apps/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $POSTGRES_USER"]
+      interval: 3s
+      timeout: 3s
+      retries: 3
+
+  migrate:
+    image: migrate/migrate
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - new
     env_file: ".env"
+    volumes:
+      - ./migrations:/migrations
+    command: ["-source", "file://migrations", "-database",  "postgres://$POSTGRES_USER:$POSTGRES_PASSWORD@database:$POSTGRES_PORT?sslmode=disable", "up"]
+    links: 
+      - postgres
 
 networks:
-  postgres:
+      new:

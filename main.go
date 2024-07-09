@@ -35,7 +35,7 @@ func main() {
 		panic(err)
 	}
 
-	url := fmt.Sprintf("postgres://%s:%s@%s:%s", config.DB.User, config.DB.Password, config.DB.Host, config.DB.Port)
+	url := fmt.Sprintf("postgres://%s:%s@%s:%s?sslmode=disable", config.DB.User, config.DB.Password, config.DB.Host, config.DB.Port)
 	conn, err := pgx.Connect(context.Background(), url)
 	if err != nil {
 		panic(err)
