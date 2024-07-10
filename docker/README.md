@@ -14,6 +14,16 @@ docker compose -f docker/compose.yaml up -d
 docker compose -f docker/compose.yaml down
 ```
 
+## Access DB
+
+### pgadmin4
+
+Visit `localhost:8888`
+
+### pgcli
+
+pgcli -h localhost -p $POSTGRES_PORT -u $POSTGRES_USER -W -d budgit
+
 ## Managing Migrations
 
 ### Migrate up
