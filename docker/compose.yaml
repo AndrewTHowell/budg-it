@@ -27,19 +27,6 @@ services:
     configs:
       - source: servers.json
         target: /pgadmin4/servers.json
-      - source: pgpass
-        target: /pgpass
-    entrypoint: /bin/sh -c "chmod 600 /pgpass; /entrypoint.sh;"
-
-  migrate:
-    image: migrate/migrate
-    depends_on:
-      postgres:
-        condition: service_healthy
-    env_file: ".env"
-    volumes:
-      - ./../migrations:/migrations
-    command: ["-source", "file://migrations", "-database",  "postgres://$POSTGRES_USER:$POSTGRES_PASSWORD@postgres:$POSTGRES_PORT?sslmode=disable", "up"]
 
 configs:
   servers.json:
@@ -48,11 +35,8 @@ configs:
         "Name": "Postgres",
         "Group": "Servers",
         "Host": "postgres",
-        "Port": 5432,
+        "Port": $POSTGRES_PORT,
         "MaintenanceDB": "postgres",
-        "Username": "user",
-        "PassFile": "/pgpass",
+        "Username": "$POSTGRES_USER",
         "SSLMode": "prefer"
       }}}
-  pgpass:
-    content: postgres:5432:*:user:passwd
