@@ -21,7 +21,7 @@ docker compose -f docker/compose.yaml down
 Run this to apply all up migrations
 ```
 docker run --rm \
-    -v './migrations:/migrations' \
+    -v './budgit/migrations:/migrations' \
     --network host \
     migrate/migrate -path /migrations/ -database 'postgres://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:$POSTGRES_PORT/budgit?sslmode=disable' up
 ```
@@ -31,7 +31,7 @@ docker run --rm \
 Run this to apply all down migrations
 ```
 docker run --rm \
-    -v './migrations:/migrations' \
+    -v './budgit/migrations:/migrations' \
     --network host \
     migrate/migrate -path /migrations/ -database 'postgres://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:$POSTGRES_PORT/budgit?sslmode=disable' down --all
 ```
@@ -47,6 +47,6 @@ migrate:
       condition: service_healthy
   env_file: ".env"
   volumes:
-    - ./../migrations:/migrations
+    - ./../budgit/migrations:/migrations
   command: ["-source", "file://migrations", "-database",  "postgres://$POSTGRES_USER:$POSTGRES_PASSWORD@postgres:$POSTGRES_PORT/budgit?sslmode=disable", "up"]
 ```
