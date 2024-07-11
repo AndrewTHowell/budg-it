@@ -31,9 +31,9 @@ var accountColumnsStr = strings.Join(accountColumns, ", ")
 
 func (db DB) InsertAccounts(ctx context.Context, queryer Queryer, accounts ...*Account) ([]string, error) {
 	sql := fmt.Sprintf(`
-		INSERT INTO accounts (%[0]s)
+		INSERT INTO accounts (%[1]s)
 		(
-			SELECT %[0]s
+			SELECT %[1]s
 			FROM UNNEST(
 				$1::TEXT[],
 				$2::TEXT[],
@@ -45,7 +45,7 @@ func (db DB) InsertAccounts(ctx context.Context, queryer Queryer, accounts ...*A
 				$8::BIGINT[],
 				$9::BIGINT[]
 			)
-			AS u(%[0]s)
+			AS u(%[1]s)
 		)
 		ON CONFLICT DO NOTHING
 		RETURNING id;
@@ -64,11 +64,31 @@ func (db DB) InsertAccounts(ctx context.Context, queryer Queryer, accounts ...*A
 	return ids, nil
 }
 
-func (db *DB) SelectAccountsByID(ctx context.Context, queryer Queryer, accountIDs ...string) (map[string]*Account, error) {
+func (db DB) SelectAccounts(ctx context.Context, queryer Queryer) ([]*Account, error) {
 	sql := fmt.Sprintf(`
-		SELECT %[0]s
+		SELECT %[1]s
 		FROM accounts
-		WHERE id in $1::TEXT[]
+		ORDER BY id
+	`, accountColumnsStr)
+
+	rows, err := queryer.Query(ctx, sql)
+	if err != nil {
+		return nil, fmt.Errorf("selecting accounts: %w", err)
+	}
+	defer rows.Close()
+
+	accounts, err := pgx.CollectRows(rows, pgx.RowToStructByName[Account])
+	if err != nil {
+		return nil, fmt.Errorf("selecting accounts: %w", err)
+	}
+	return structsToPointers(accounts), nil
+}
+
+func (db DB) SelectAccountsByID(ctx context.Context, queryer Queryer, accountIDs ...string) (map[string]*Account, error) {
+	sql := fmt.Sprintf(`
+		SELECT %[1]s
+		FROM accounts
+		WHERE id = ANY($1::TEXT[])
 	`, accountColumnsStr)
 
 	ids := make([]pgtype.Text, 0, len(accountIDs))
@@ -82,30 +102,11 @@ func (db *DB) SelectAccountsByID(ctx context.Context, queryer Queryer, accountID
 	}
 	defer rows.Close()
 
-	accounts, err := pgx.CollectRows(rows, pgx.RowToStructByName[*Account])
+	accounts, err := pgx.CollectRows(rows, pgx.RowToStructByName[Account])
 	if err != nil {
 		return nil, fmt.Errorf("selecting accounts by ID: %w", err)
 	}
-	return mapByID(accounts), nil
-}
-
-func (db *DB) SelectAccounts(ctx context.Context, queryer Queryer) ([]*Account, error) {
-	sql := fmt.Sprintf(`
-		SELECT %[0]s
-		FROM accounts
-	`, accountColumnsStr)
-
-	rows, err := queryer.Query(ctx, sql)
-	if err != nil {
-		return nil, fmt.Errorf("selecting accounts: %w", err)
-	}
-	defer rows.Close()
-
-	accounts, err := pgx.CollectRows(rows, pgx.RowToStructByName[*Account])
-	if err != nil {
-		return nil, fmt.Errorf("selecting accounts: %w", err)
-	}
-	return accounts, nil
+	return mapByID(structsToPointers(accounts)), nil
 }
 
 func rowsToIDs(rows pgx.Rows) ([]string, error) {
@@ -118,6 +119,14 @@ func rowsToIDs(rows pgx.Rows) ([]string, error) {
 		ids = append(ids, id)
 	}
 	return ids, nil
+}
+
+func structsToPointers[E any](elems []E) []*E {
+	ptrElems := make([]*E, 0, len(elems))
+	for _, elem := range elems {
+		ptrElems = append(ptrElems, &elem)
+	}
+	return ptrElems
 }
 
 func accountsToArgs(accounts []*Account) []any {

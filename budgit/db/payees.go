@@ -1,13 +1,6 @@
 package db
 
-import (
-	"context"
-	"fmt"
-
-	"github.com/andrewthowell/budgit/budgit"
-)
-
-func (db *DB) InsertPayees(ctx context.Context, payees ...*budgit.Payee) error {
+/* func (db *DB) InsertPayees(ctx context.Context, payees ...*budgit.Payee) error {
 	if err := insert(&db.payees, payees...); err != nil {
 		return fmt.Errorf("inserting %d payees: %w", len(payees), err)
 	}
@@ -27,4 +20,4 @@ func (db *DB) SelectPayeesByName(ctx context.Context, payeeNames ...string) (map
 		}
 	}
 	return payees, nil
-}
+} */
