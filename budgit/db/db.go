@@ -1,77 +1,47 @@
 package db
 
 import (
-	"slices"
+	"context"
+	"reflect"
 
-	"github.com/andrewthowell/budgit/budgit"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
-type DB struct {
-	accounts         []*budgit.Account
-	externalAccounts []*budgit.ExternalAccount
-	transactions     []*budgit.Transaction
-	payees           []*budgit.Payee
+type DB struct{}
+
+func New() DB {
+	return DB{}
 }
 
-func New() *DB {
-	return &DB{
-		accounts:         []*budgit.Account{},
-		externalAccounts: []*budgit.ExternalAccount{},
-		transactions:     []*budgit.Transaction{},
-		payees:           []*budgit.Payee{},
+type Queryer interface {
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+}
+
+type Execer interface {
+	Exec(ctx context.Context, sql string, arguments ...any) (pgconn.CommandTag, error)
+}
+
+const dbStructKey = "db"
+
+func getAllDBColumns(strct any) []string {
+	elem := reflect.TypeOf(strct)
+	columns := make([]string, 0, elem.NumField())
+	for i := range elem.NumField() {
+		columns = append(columns, string(elem.FieldByIndex([]int{i}).Tag.Get(dbStructKey)))
 	}
+	return columns
 }
 
 type idGetter interface {
 	GetID() string
 }
 
-func insert[I idGetter](slice *[]*I, elems ...*I) error {
-	*slice = slices.Grow(*slice, len(elems))
+func mapByID[E idGetter](elems []E) map[string]E {
+	elemsByID := make(map[string]E, len(elems))
 	for _, elem := range elems {
-		idx := slices.IndexFunc(*slice, func(i *I) bool {
-			return (*elem).GetID() < (*i).GetID()
-		})
-		if idx != -1 {
-			*slice = slices.Insert(*slice, idx, elem)
-		}
-		// If no index can be found where given element has lesser ID, element has the greatest ID and belongs at the end.
-		*slice = append(*slice, elem)
+		elemsByID[elem.GetID()] = elem
 	}
-	return nil
-}
-
-func selectByIDs[I idGetter](slice []*I, ids []string) map[string]*I {
-	elems := make(map[string]*I, len(ids))
-	for _, id := range ids {
-		elem := selectByID(slice, id)
-		if elem != nil {
-			elems[(*elem).GetID()] = elem
-		}
-	}
-	return elems
-}
-
-func selectByID[I idGetter](slice []*I, id string) *I {
-	idx, ok := slices.BinarySearchFunc(slice, id, func(elem *I, targetID string) int {
-		if (*elem).GetID() < targetID {
-			return -1
-		}
-		if (*elem).GetID() == targetID {
-			return 0
-		}
-		return 1
-	})
-	if !ok {
-		return nil
-	}
-	return slice[idx]
-}
-
-func boolMap[E comparable](slice []E) map[E]bool {
-	m := make(map[E]bool, len(slice))
-	for _, e := range slice {
-		m[e] = true
-	}
-	return m
+	return elemsByID
 }
