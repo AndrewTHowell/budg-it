@@ -109,26 +109,6 @@ func (db DB) SelectAccountsByID(ctx context.Context, queryer Queryer, accountIDs
 	return mapByID(structsToPointers(accounts)), nil
 }
 
-func rowsToIDs(rows pgx.Rows) ([]string, error) {
-	ids := make([]string, 0, rows.CommandTag().RowsAffected())
-	for rows.Next() {
-		var id string
-		if err := rows.Scan(&id); err != nil {
-			return nil, fmt.Errorf("scanning rows: %w", err)
-		}
-		ids = append(ids, id)
-	}
-	return ids, nil
-}
-
-func structsToPointers[E any](elems []E) []*E {
-	ptrElems := make([]*E, 0, len(elems))
-	for _, elem := range elems {
-		ptrElems = append(ptrElems, &elem)
-	}
-	return ptrElems
-}
-
 func accountsToArgs(accounts []*Account) []any {
 	ids := make([]pgtype.Text, 0, len(accounts))
 	names := make([]pgtype.Text, 0, len(accounts))
