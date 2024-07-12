@@ -22,8 +22,10 @@ func (p Payee) GetName() string {
 	return p.Name.String
 }
 
-var payeeColumns = getAllDBColumns(Payee{})
-var payeeColumnsStr = strings.Join(payeeColumns, ", ")
+var (
+	payeeColumns    = getAllDBColumns(Payee{})
+	payeeColumnsStr = strings.Join(payeeColumns, ", ")
+)
 
 func (db DB) InsertPayees(ctx context.Context, queryer Queryer, payees ...*Payee) ([]string, error) {
 	sql := fmt.Sprintf(`

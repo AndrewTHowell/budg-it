@@ -27,3 +27,6 @@ CREATE TABLE
     amount BIGINT NOT NULL,
     cleared BOOLEAN NOT NULL
   );
+
+CREATE INDEX transactions_account_effective_date_amount_idx ON transactions (account_id, effective_date, amount);
+CREATE INDEX transactions_effective_date_amount_idx ON transactions (effective_date, amount);

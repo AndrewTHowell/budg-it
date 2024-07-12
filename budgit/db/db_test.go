@@ -59,7 +59,7 @@ func (s *dbSuite) SetupSuite() {
 }
 
 func (s *dbSuite) TearDownTest() {
-	s.truncateTables("accounts")
+	s.truncateTables("accounts", "payees", "transactions")
 }
 
 func (s *dbSuite) TearDownSuite() {

@@ -26,8 +26,10 @@ func (a Account) GetID() string {
 	return a.ID.String
 }
 
-var accountColumns = getAllDBColumns(Account{})
-var accountColumnsStr = strings.Join(accountColumns, ", ")
+var (
+	accountColumns    = getAllDBColumns(Account{})
+	accountColumnsStr = strings.Join(accountColumns, ", ")
+)
 
 func (db DB) InsertAccounts(ctx context.Context, queryer Queryer, accounts ...*Account) ([]string, error) {
 	sql := fmt.Sprintf(`
