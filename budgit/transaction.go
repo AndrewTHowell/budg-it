@@ -1,14 +1,15 @@
 package budgit
 
 import (
-	date "cloud.google.com/go/civil"
+	"time"
+
 	"github.com/google/uuid"
 )
 
 // Transaction is an Transaction, unique only within a given Budget.
 type Transaction struct {
 	ID              string
-	Date            date.Date
+	EffectiveDate   time.Time
 	AccountID       string
 	PayeeID         string
 	IsPayeeInternal bool
@@ -18,11 +19,11 @@ type Transaction struct {
 }
 
 // NewTransaction returns an Transaction in the given Budget.
-func NewTransaction(accountID string, date date.Date, payeeID string, isPayeeInternal bool, categoryID string, amount BalanceAmount, cleared bool) *Transaction {
+func NewTransaction(accountID string, date time.Time, payeeID string, isPayeeInternal bool, categoryID string, amount BalanceAmount, cleared bool) *Transaction {
 	return &Transaction{
 		ID:              uuid.New().String(),
 		AccountID:       accountID,
-		Date:            date,
+		EffectiveDate:   date,
 		PayeeID:         payeeID,
 		IsPayeeInternal: isPayeeInternal,
 		CategoryID:      categoryID,
@@ -39,7 +40,7 @@ func (t Transaction) Mirror() *Transaction {
 	return &Transaction{
 		ID:              uuid.New().String(),
 		AccountID:       t.PayeeID,
-		Date:            t.Date,
+		EffectiveDate:   t.EffectiveDate,
 		PayeeID:         t.AccountID,
 		IsPayeeInternal: t.IsPayeeInternal,
 		CategoryID:      t.CategoryID,

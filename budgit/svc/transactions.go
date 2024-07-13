@@ -8,7 +8,7 @@ import (
 
 	"github.com/andrewthowell/budgit/budgit"
 	"github.com/andrewthowell/budgit/budgit/db"
-	"github.com/jackc/pgx"
+	"github.com/jackc/pgx/v5"
 	"golang.org/x/exp/maps"
 )
 

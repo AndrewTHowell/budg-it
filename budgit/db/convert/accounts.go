@@ -1,11 +1,8 @@
 package convert
 
 import (
-	"time"
-
 	"github.com/andrewthowell/budgit/budgit"
 	"github.com/andrewthowell/budgit/budgit/db"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 func ToAccount(account *db.Account) *budgit.Account {
@@ -48,25 +45,4 @@ func FromAccount(account *budgit.Account) *db.Account {
 
 	}
 	return dbAccount
-}
-
-func toText(str string) pgtype.Text {
-	if str == "" {
-		return pgtype.Text{}
-	}
-	return pgtype.Text{String: str, Valid: true}
-}
-
-func toInt8(i int64) pgtype.Int8 {
-	if i == 0 {
-		return pgtype.Int8{}
-	}
-	return pgtype.Int8{Int64: i, Valid: true}
-}
-
-func toTimestamptz(t time.Time) pgtype.Timestamptz {
-	if t.IsZero() {
-		return pgtype.Timestamptz{}
-	}
-	return pgtype.Timestamptz{Time: t, Valid: true}
 }

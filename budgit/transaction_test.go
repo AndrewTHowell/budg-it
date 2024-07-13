@@ -26,7 +26,7 @@ func (s *budgitSuite) TestNewTransaction() {
 	s.Run("ReturnsTransactionWithGivenDate", func() {
 		expectedDate, _ := date.ParseDate("1970/01/01")
 		transaction := budgit.NewTransaction("", "", expectedDate, "", "", 0)
-		s.Equal(expectedDate, transaction.Date)
+		s.Equal(expectedDate, transaction.EffectiveDate)
 	})
 	s.Run("ReturnsTransactionWithGivenPayeeID", func() {
 		expectedPayeeID := "payeeID"
