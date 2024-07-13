@@ -1,9 +1,9 @@
-package convert_test
+package dbconvert_test
 
 import (
 	"github.com/andrewthowell/budgit/budgit"
 	"github.com/andrewthowell/budgit/budgit/db"
-	"github.com/andrewthowell/budgit/budgit/db/convert"
+	"github.com/andrewthowell/budgit/budgit/db/dbconvert"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -33,16 +33,16 @@ func (s *convertSuite) TestPayee() {
 	for _, tc := range testCases {
 		s.Run(tc.name, func() {
 			s.Run("ToPayee", func() {
-				s.CMPEqual(tc.budgitPayee, convert.ToPayee(tc.dbPayee))
+				s.CMPEqual(tc.budgitPayee, dbconvert.ToPayees(tc.dbPayee))
 			})
 			s.Run("FromPayee", func() {
-				s.CMPEqual(tc.dbPayee, convert.FromPayee(tc.budgitPayee))
+				s.CMPEqual(tc.dbPayee, dbconvert.FromPayees(tc.budgitPayee))
 			})
 			s.Run("FromPayeeToPayee", func() {
-				s.CMPEqual(tc.dbPayee, convert.FromPayee(convert.ToPayee(tc.dbPayee)))
+				s.CMPEqual(tc.dbPayee, dbconvert.FromPayees(dbconvert.ToPayees(tc.dbPayee)...))
 			})
 			s.Run("ToPayeeFromPayee", func() {
-				s.CMPEqual(tc.budgitPayee, convert.ToPayee(convert.FromPayee(tc.budgitPayee)))
+				s.CMPEqual(tc.budgitPayee, dbconvert.ToPayees(dbconvert.FromPayees(tc.budgitPayee)...))
 			})
 		})
 	}

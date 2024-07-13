@@ -1,11 +1,19 @@
-package convert
+package dbconvert
 
 import (
 	"github.com/andrewthowell/budgit/budgit"
 	"github.com/andrewthowell/budgit/budgit/db"
 )
 
-func ToTransaction(transaction *db.Transaction) *budgit.Transaction {
+func ToTransactions(dbTransactions ...*db.Transaction) []*budgit.Transaction {
+	transactions := make([]*budgit.Transaction, 0, len(dbTransactions))
+	for _, dbTransaction := range dbTransactions {
+		transactions = append(transactions, toTransaction(dbTransaction))
+	}
+	return transactions
+}
+
+func toTransaction(transaction *db.Transaction) *budgit.Transaction {
 	return &budgit.Transaction{
 		ID:              transaction.ID.String,
 		EffectiveDate:   transaction.EffectiveDate.Time,
@@ -17,7 +25,15 @@ func ToTransaction(transaction *db.Transaction) *budgit.Transaction {
 	}
 }
 
-func FromTransaction(transaction *budgit.Transaction) *db.Transaction {
+func FromTransactions(transactions ...*budgit.Transaction) []*db.Transaction {
+	dbTransactions := make([]*db.Transaction, 0, len(transactions))
+	for _, transaction := range transactions {
+		dbTransactions = append(dbTransactions, fromTransaction(transaction))
+	}
+	return dbTransactions
+}
+
+func fromTransaction(transaction *budgit.Transaction) *db.Transaction {
 	return &db.Transaction{
 		ID:              toText(transaction.ID),
 		EffectiveDate:   toDate(transaction.EffectiveDate),

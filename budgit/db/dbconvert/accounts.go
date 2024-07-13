@@ -1,11 +1,19 @@
-package convert
+package dbconvert
 
 import (
 	"github.com/andrewthowell/budgit/budgit"
 	"github.com/andrewthowell/budgit/budgit/db"
 )
 
-func ToAccount(account *db.Account) *budgit.Account {
+func ToAccounts(dbAccounts ...*db.Account) []*budgit.Account {
+	accounts := make([]*budgit.Account, 0, len(dbAccounts))
+	for _, dbAccount := range dbAccounts {
+		accounts = append(accounts, toAccount(dbAccount))
+	}
+	return accounts
+}
+
+func toAccount(account *db.Account) *budgit.Account {
 	var externalAccount *budgit.ExternalAccount
 	if account.ExternalID.Valid {
 		externalAccount = &budgit.ExternalAccount{
@@ -29,7 +37,15 @@ func ToAccount(account *db.Account) *budgit.Account {
 	}
 }
 
-func FromAccount(account *budgit.Account) *db.Account {
+func FromAccounts(accounts ...*budgit.Account) []*db.Account {
+	dbAccounts := make([]*db.Account, 0, len(accounts))
+	for _, account := range accounts {
+		dbAccounts = append(dbAccounts, fromAccount(account))
+	}
+	return dbAccounts
+}
+
+func fromAccount(account *budgit.Account) *db.Account {
 	dbAccount := &db.Account{
 		ID:               toText(account.ID),
 		Name:             toText(account.Name),

@@ -1,11 +1,11 @@
-package convert_test
+package dbconvert_test
 
 import (
 	"time"
 
 	"github.com/andrewthowell/budgit/budgit"
 	"github.com/andrewthowell/budgit/budgit/db"
-	"github.com/andrewthowell/budgit/budgit/db/convert"
+	"github.com/andrewthowell/budgit/budgit/db/dbconvert"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -45,16 +45,16 @@ func (s *convertSuite) TestTransaction() {
 	for _, tc := range testCases {
 		s.Run(tc.name, func() {
 			s.Run("ToTransaction", func() {
-				s.CMPEqual(tc.budgitTransaction, convert.ToTransaction(tc.dbTransaction))
+				s.CMPEqual(tc.budgitTransaction, dbconvert.ToTransactions(tc.dbTransaction))
 			})
 			s.Run("FromTransaction", func() {
-				s.CMPEqual(tc.dbTransaction, convert.FromTransaction(tc.budgitTransaction))
+				s.CMPEqual(tc.dbTransaction, dbconvert.FromTransactions(tc.budgitTransaction))
 			})
 			s.Run("FromTransactionToTransaction", func() {
-				s.CMPEqual(tc.dbTransaction, convert.FromTransaction(convert.ToTransaction(tc.dbTransaction)))
+				s.CMPEqual(tc.dbTransaction, dbconvert.FromTransactions(dbconvert.ToTransactions(tc.dbTransaction)...))
 			})
 			s.Run("ToTransactionFromTransaction", func() {
-				s.CMPEqual(tc.budgitTransaction, convert.ToTransaction(convert.FromTransaction(tc.budgitTransaction)))
+				s.CMPEqual(tc.budgitTransaction, dbconvert.ToTransactions(dbconvert.FromTransactions(tc.budgitTransaction)...))
 			})
 		})
 	}

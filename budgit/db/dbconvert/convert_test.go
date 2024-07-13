@@ -1,4 +1,4 @@
-package convert_test
+package dbconvert_test
 
 import (
 	"testing"

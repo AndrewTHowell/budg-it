@@ -1,11 +1,11 @@
-package convert_test
+package dbconvert_test
 
 import (
 	"time"
 
 	"github.com/andrewthowell/budgit/budgit"
 	"github.com/andrewthowell/budgit/budgit/db"
-	"github.com/andrewthowell/budgit/budgit/db/convert"
+	"github.com/andrewthowell/budgit/budgit/db/dbconvert"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -55,16 +55,16 @@ func (s *convertSuite) TestAccount() {
 	for _, tc := range testCases {
 		s.Run(tc.name, func() {
 			s.Run("ToAccount", func() {
-				s.CMPEqual(tc.budgitAccount, convert.ToAccount(tc.dbAccount))
+				s.CMPEqual(tc.budgitAccount, dbconvert.ToAccounts(tc.dbAccount))
 			})
 			s.Run("FromAccount", func() {
-				s.CMPEqual(tc.dbAccount, convert.FromAccount(tc.budgitAccount))
+				s.CMPEqual(tc.dbAccount, dbconvert.FromAccounts(tc.budgitAccount))
 			})
 			s.Run("FromAccountToAccount", func() {
-				s.CMPEqual(tc.dbAccount, convert.FromAccount(convert.ToAccount(tc.dbAccount)))
+				s.CMPEqual(tc.dbAccount, dbconvert.FromAccounts(dbconvert.ToAccounts(tc.dbAccount)...))
 			})
 			s.Run("ToAccountFromAccount", func() {
-				s.CMPEqual(tc.budgitAccount, convert.ToAccount(convert.FromAccount(tc.budgitAccount)))
+				s.CMPEqual(tc.budgitAccount, dbconvert.ToAccounts(dbconvert.FromAccounts(tc.budgitAccount)...))
 			})
 		})
 	}
