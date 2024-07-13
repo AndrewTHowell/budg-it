@@ -6,6 +6,7 @@ CREATE TABLE
     effective_balance BIGINT NOT NULL,
     -- Fields concerning the linked external account. Optional.
     external_id TEXT,
+    external_name TEXT,
     external_integration_id TEXT,
     external_last_sync_timestamp TIMESTAMPTZ,
     external_cleared_balance BIGINT,

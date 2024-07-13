@@ -129,7 +129,6 @@ func (db DB) SelectTransactionsByAccount(ctx context.Context, queryer Queryer, a
 		return nil, fmt.Errorf("selecting transactions by name: %w", err)
 	}
 
-	fmt.Println(transactions)
 	return structsToPointers(transactions), nil
 }
 

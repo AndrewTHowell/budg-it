@@ -33,16 +33,16 @@ func (s *convertSuite) TestPayee() {
 	for _, tc := range testCases {
 		s.Run(tc.name, func() {
 			s.Run("ToPayee", func() {
-				s.CMPEqual(tc.budgitPayee, dbconvert.ToPayees(tc.dbPayee))
+				s.CMPEqual(tc.budgitPayee, dbconvert.ToPayees(tc.dbPayee)[0])
 			})
 			s.Run("FromPayee", func() {
-				s.CMPEqual(tc.dbPayee, dbconvert.FromPayees(tc.budgitPayee))
+				s.CMPEqual(tc.dbPayee, dbconvert.FromPayees(tc.budgitPayee)[0])
 			})
 			s.Run("FromPayeeToPayee", func() {
-				s.CMPEqual(tc.dbPayee, dbconvert.FromPayees(dbconvert.ToPayees(tc.dbPayee)...))
+				s.CMPEqual(tc.dbPayee, dbconvert.FromPayees(dbconvert.ToPayees(tc.dbPayee)...)[0])
 			})
 			s.Run("ToPayeeFromPayee", func() {
-				s.CMPEqual(tc.budgitPayee, dbconvert.ToPayees(dbconvert.FromPayees(tc.budgitPayee)...))
+				s.CMPEqual(tc.budgitPayee, dbconvert.ToPayees(dbconvert.FromPayees(tc.budgitPayee)...)[0])
 			})
 		})
 	}

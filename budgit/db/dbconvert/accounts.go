@@ -18,6 +18,7 @@ func toAccount(account *db.Account) *budgit.Account {
 	if account.ExternalID.Valid {
 		externalAccount = &budgit.ExternalAccount{
 			ID:                account.ExternalID.String,
+			Name:              account.ExternalName.String,
 			IntegrationID:     account.ExternalIntegrationID.String,
 			LastSyncTimestamp: account.ExternalLastSyncTimestamp.Time,
 			Balance: budgit.Balance{
@@ -54,11 +55,11 @@ func fromAccount(account *budgit.Account) *db.Account {
 	}
 	if account.ExternalAccount != nil {
 		dbAccount.ExternalID = toText(account.ExternalAccount.ID)
+		dbAccount.ExternalName = toText(account.ExternalAccount.Name)
 		dbAccount.ExternalIntegrationID = toText(account.ExternalAccount.IntegrationID)
 		dbAccount.ExternalLastSyncTimestamp = toTimestamptz(account.ExternalAccount.LastSyncTimestamp)
 		dbAccount.ExternalClearedBalance = toInt8(int64(account.ExternalAccount.Balance.ClearedBalance))
 		dbAccount.ExternalEffectiveBalance = toInt8(int64(account.ExternalAccount.Balance.EffectiveBalance))
-
 	}
 	return dbAccount
 }

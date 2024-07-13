@@ -45,16 +45,16 @@ func (s *convertSuite) TestTransaction() {
 	for _, tc := range testCases {
 		s.Run(tc.name, func() {
 			s.Run("ToTransaction", func() {
-				s.CMPEqual(tc.budgitTransaction, dbconvert.ToTransactions(tc.dbTransaction))
+				s.CMPEqual(tc.budgitTransaction, dbconvert.ToTransactions(tc.dbTransaction)[0])
 			})
 			s.Run("FromTransaction", func() {
-				s.CMPEqual(tc.dbTransaction, dbconvert.FromTransactions(tc.budgitTransaction))
+				s.CMPEqual(tc.dbTransaction, dbconvert.FromTransactions(tc.budgitTransaction)[0])
 			})
 			s.Run("FromTransactionToTransaction", func() {
-				s.CMPEqual(tc.dbTransaction, dbconvert.FromTransactions(dbconvert.ToTransactions(tc.dbTransaction)...))
+				s.CMPEqual(tc.dbTransaction, dbconvert.FromTransactions(dbconvert.ToTransactions(tc.dbTransaction)...)[0])
 			})
 			s.Run("ToTransactionFromTransaction", func() {
-				s.CMPEqual(tc.budgitTransaction, dbconvert.ToTransactions(dbconvert.FromTransactions(tc.budgitTransaction)...))
+				s.CMPEqual(tc.budgitTransaction, dbconvert.ToTransactions(dbconvert.FromTransactions(tc.budgitTransaction)...)[0])
 			})
 		})
 	}

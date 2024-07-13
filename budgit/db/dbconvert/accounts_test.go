@@ -28,6 +28,7 @@ func (s *convertSuite) TestAccount() {
 				ClearedBalance:            pgtype.Int8{Int64: 1, Valid: true},
 				EffectiveBalance:          pgtype.Int8{Int64: 2, Valid: true},
 				ExternalID:                pgtype.Text{String: "external_id-1", Valid: true},
+				ExternalName:              pgtype.Text{String: "external_name-1", Valid: true},
 				ExternalIntegrationID:     pgtype.Text{String: "external_integration_id-1", Valid: true},
 				ExternalLastSyncTimestamp: pgtype.Timestamptz{Time: time.Unix(1, 0).UTC(), Valid: true},
 				ExternalClearedBalance:    pgtype.Int8{Int64: 3, Valid: true},
@@ -42,6 +43,7 @@ func (s *convertSuite) TestAccount() {
 				},
 				ExternalAccount: &budgit.ExternalAccount{
 					ID:                "external_id-1",
+					Name:              "external_name-1",
 					IntegrationID:     "external_integration_id-1",
 					LastSyncTimestamp: time.Unix(1, 0).UTC(),
 					Balance: budgit.Balance{
@@ -55,16 +57,16 @@ func (s *convertSuite) TestAccount() {
 	for _, tc := range testCases {
 		s.Run(tc.name, func() {
 			s.Run("ToAccount", func() {
-				s.CMPEqual(tc.budgitAccount, dbconvert.ToAccounts(tc.dbAccount))
+				s.CMPEqual(tc.budgitAccount, dbconvert.ToAccounts(tc.dbAccount)[0])
 			})
 			s.Run("FromAccount", func() {
-				s.CMPEqual(tc.dbAccount, dbconvert.FromAccounts(tc.budgitAccount))
+				s.CMPEqual(tc.dbAccount, dbconvert.FromAccounts(tc.budgitAccount)[0])
 			})
 			s.Run("FromAccountToAccount", func() {
-				s.CMPEqual(tc.dbAccount, dbconvert.FromAccounts(dbconvert.ToAccounts(tc.dbAccount)...))
+				s.CMPEqual(tc.dbAccount, dbconvert.FromAccounts(dbconvert.ToAccounts(tc.dbAccount)...)[0])
 			})
 			s.Run("ToAccountFromAccount", func() {
-				s.CMPEqual(tc.budgitAccount, dbconvert.ToAccounts(dbconvert.FromAccounts(tc.budgitAccount)...))
+				s.CMPEqual(tc.budgitAccount, dbconvert.ToAccounts(dbconvert.FromAccounts(tc.budgitAccount)...)[0])
 			})
 		})
 	}

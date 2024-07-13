@@ -16,6 +16,7 @@ type Account struct {
 	EffectiveBalance pgtype.Int8 `db:"effective_balance"`
 	// Fields concerning the linked external account. Optional.
 	ExternalID                pgtype.Text        `db:"external_id"`
+	ExternalName              pgtype.Text        `db:"external_name"`
 	ExternalIntegrationID     pgtype.Text        `db:"external_integration_id"`
 	ExternalLastSyncTimestamp pgtype.Timestamptz `db:"external_last_sync_timestamp"`
 	ExternalClearedBalance    pgtype.Int8        `db:"external_cleared_balance"`
@@ -43,9 +44,10 @@ func (db DB) InsertAccounts(ctx context.Context, queryer Queryer, accounts ...*A
 				$4::BIGINT[],
 				$5::TEXT[],
 				$6::TEXT[],
-				$7::TIMESTAMPTZ[],
-				$8::BIGINT[],
-				$9::BIGINT[]
+				$7::TEXT[],
+				$8::TIMESTAMPTZ[],
+				$9::BIGINT[],
+				$10::BIGINT[]
 			)
 			AS u(%[1]s)
 		)
@@ -117,6 +119,7 @@ func accountsToArgs(accounts []*Account) []any {
 	cleared_balances := make([]pgtype.Int8, 0, len(accounts))
 	effective_balances := make([]pgtype.Int8, 0, len(accounts))
 	external_ids := make([]pgtype.Text, 0, len(accounts))
+	external_names := make([]pgtype.Text, 0, len(accounts))
 	external_integration_ids := make([]pgtype.Text, 0, len(accounts))
 	external_last_sync_timestamp := make([]pgtype.Timestamptz, 0, len(accounts))
 	external_cleared_balance := make([]pgtype.Int8, 0, len(accounts))
@@ -127,6 +130,7 @@ func accountsToArgs(accounts []*Account) []any {
 		cleared_balances = append(cleared_balances, account.ClearedBalance)
 		effective_balances = append(effective_balances, account.EffectiveBalance)
 		external_ids = append(external_ids, account.ExternalID)
+		external_names = append(external_names, account.ExternalName)
 		external_integration_ids = append(external_integration_ids, account.ExternalIntegrationID)
 		external_last_sync_timestamp = append(external_last_sync_timestamp, account.ExternalLastSyncTimestamp)
 		external_cleared_balance = append(external_cleared_balance, account.ExternalClearedBalance)
@@ -138,6 +142,7 @@ func accountsToArgs(accounts []*Account) []any {
 		cleared_balances,
 		effective_balances,
 		external_ids,
+		external_names,
 		external_integration_ids,
 		external_last_sync_timestamp,
 		external_cleared_balance,

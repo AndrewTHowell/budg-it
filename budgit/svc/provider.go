@@ -25,7 +25,7 @@ func (s Service) LoadAccountsFromProvider(ctx context.Context, providerID string
 	accounts := make([]*budgit.Account, 0, len(externalAccounts))
 	for _, externalAccount := range externalAccounts {
 		// TODO: use Name once reinstated
-		name := fmt.Sprintf("%s - %s", externalAccount.IntegrationID, "stub") //externalAccount.Name)
+		name := fmt.Sprintf("%s - %s", externalAccount.IntegrationID, externalAccount.Name)
 		accounts = append(accounts, &budgit.Account{
 			ID:              uuid.New().String(),
 			Name:            name,

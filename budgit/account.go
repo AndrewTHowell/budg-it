@@ -13,6 +13,7 @@ type Account struct {
 // ExternalAccount is an Account representing some real, external Account that is attached to a budgit Account.
 type ExternalAccount struct {
 	ID                string
+	Name              string
 	IntegrationID     string
 	LastSyncTimestamp time.Time
 	Balance           Balance
