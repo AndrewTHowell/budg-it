@@ -4,6 +4,7 @@ A simple zero-based budgeting tool which aims to take the pain out of tracking y
 
 ## Next Steps
 
+1. Persist integrations
 1. Add resilience to failed transactions
 2. Add domain validation
 3. Build out journeys
