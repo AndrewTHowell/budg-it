@@ -47,9 +47,9 @@ func main() {
 		panic(err)
 	}
 
-	service := svc.New(conn, db.DB{}, map[string]svc.Provider{starlingClient.ID(): starlingClient})
+	service := svc.New(conn, db.DB{}, []svc.Integration{starlingClient})
 
-	accounts, err := service.LoadAccountsFromProvider(context.Background(), starlingClient.ID())
+	accounts, err := service.LoadAccountsFromIntegration(context.Background(), starlingClient.ID())
 	if err != nil {
 		panic(err)
 	}

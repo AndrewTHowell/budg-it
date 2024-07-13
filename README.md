@@ -4,16 +4,16 @@ A simple zero-based budgeting tool which aims to take the pain out of tracking y
 
 ## Next Steps
 
-1. Persist integrations
-1. Add resilience to failed transactions
-2. Add domain validation
-3. Build out journeys
+1. Add logging
+2. Add resilience to failed transactions
+3. Add domain validation
+4. Build out journeys
   - Account management
   - Importing transactions  
-4. Start zero-based budgeting logic
+5. Start zero-based budgeting logic
   - Assign funds to categories
   - Create targets
-5. Wrap this in Docker
+6. Wrap this in Docker
 
 ## Contributors
 

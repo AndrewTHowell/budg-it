@@ -1,5 +1,7 @@
 package clients
 
-import "fmt"
+import (
+	"fmt"
+)
 
 var ErrAccountNotFound = fmt.Errorf("the requested Account does not exist")

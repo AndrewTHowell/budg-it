@@ -25,16 +25,16 @@ type DB interface {
 }
 
 type Service struct {
-	conn      TxConn
-	db        DB
-	providers map[string]Provider
+	conn         TxConn
+	db           DB
+	integrations map[string]Integration
 }
 
-func New(conn TxConn, db DB, providers map[string]Provider) *Service {
+func New(conn TxConn, db DB, integrations []Integration) *Service {
 	return &Service{
-		conn:      conn,
-		db:        db,
-		providers: providers,
+		conn:         conn,
+		db:           db,
+		integrations: mapByID(integrations),
 	}
 }
 
@@ -60,6 +60,18 @@ func (s Service) inTx(ctx context.Context, txFunc func(conn Conn) error, txOptio
 	}
 	// Reaching here means all normal errors have been avoided, but must return rollbackErr in case defer errors and the error must be returned.
 	return rollbackErr
+}
+
+type idGetter interface {
+	ID() string
+}
+
+func mapByID[E idGetter](elems []E) map[string]E {
+	elemsByID := make(map[string]E, len(elems))
+	for _, elem := range elems {
+		elemsByID[elem.ID()] = elem
+	}
+	return elemsByID
 }
 
 func deduplicate[S ~[]E, E comparable](slice S) S {

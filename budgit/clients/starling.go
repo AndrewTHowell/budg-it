@@ -12,7 +12,7 @@ import (
 	"github.com/andrewthowell/budgit/integrations/starling"
 )
 
-const providerStarling = "Starling"
+const starlingIntegrationID = "starling"
 
 type Client struct {
 	client *starling.ClientWithResponses
@@ -32,7 +32,7 @@ func NewStarlingClient(url, apiToken string) (*Client, error) {
 	return &Client{client: client}, nil
 }
 
-func (c Client) ID() string { return providerStarling }
+func (c Client) ID() string { return starlingIntegrationID }
 
 func (c Client) GetExternalAccounts(ctx context.Context, syncTime time.Time) ([]*budgit.ExternalAccount, error) {
 	resp, err := c.client.GetAccountsWithResponse(ctx)
@@ -55,7 +55,7 @@ func (c Client) GetExternalAccounts(ctx context.Context, syncTime time.Time) ([]
 		}
 		accounts = append(accounts, &budgit.ExternalAccount{
 			ID:                account.AccountUid.String(),
-			IntegrationID:     providerStarling,
+			IntegrationID:     starlingIntegrationID,
 			LastSyncTimestamp: syncTime,
 			Balance: budgit.Balance{
 				ClearedBalance:   budgit.BalanceAmount(resp.JSON200.TotalClearedBalance.MinorUnits),
