@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"slices"
+	"time"
 
 	"github.com/andrewthowell/budgit/budgit"
 	"github.com/andrewthowell/budgit/integrations/starling"
@@ -33,7 +34,7 @@ func NewStarlingClient(url, apiToken string) (*Client, error) {
 
 func (c Client) ID() string { return providerStarling }
 
-func (c Client) GetExternalAccounts(ctx context.Context) ([]*budgit.ExternalAccount, error) {
+func (c Client) GetExternalAccounts(ctx context.Context, syncTime time.Time) ([]*budgit.ExternalAccount, error) {
 	resp, err := c.client.GetAccountsWithResponse(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("getting Accounts: %w", err)
@@ -52,26 +53,26 @@ func (c Client) GetExternalAccounts(ctx context.Context) ([]*budgit.ExternalAcco
 		if resp.JSON4XX != nil {
 			return nil, fmt.Errorf("getting Accounts: %w", format4XXError(resp.JSON4XX))
 		}
-		accounts = append(accounts, budgit.NewExternalAccount(
-			providerStarling,
-			account.AccountUid.String(),
-			*account.Name,
-			budgit.Balance{
+		accounts = append(accounts, &budgit.ExternalAccount{
+			ID:                account.AccountUid.String(),
+			IntegrationID:     providerStarling,
+			LastSyncTimestamp: syncTime,
+			Balance: budgit.Balance{
 				ClearedBalance:   budgit.BalanceAmount(resp.JSON200.TotalClearedBalance.MinorUnits),
 				EffectiveBalance: budgit.BalanceAmount(resp.JSON200.TotalEffectiveBalance.MinorUnits),
 			},
-		))
+		})
 	}
 	return accounts, nil
 }
 
-func (c Client) GetExternalAccount(ctx context.Context, externalID string) (*budgit.ExternalAccount, error) {
-	accounts, err := c.GetExternalAccounts(ctx)
+func (c Client) GetExternalAccount(ctx context.Context, syncTime time.Time, externalID string) (*budgit.ExternalAccount, error) {
+	accounts, err := c.GetExternalAccounts(ctx, syncTime)
 	if err != nil {
 		return nil, fmt.Errorf("getting Account %q: %w", externalID, err)
 	}
 	idx := slices.IndexFunc(accounts, func(a *budgit.ExternalAccount) bool {
-		return a.ExternalID == externalID
+		return a.ID == externalID
 	})
 	if idx == -1 {
 		return nil, ErrAccountNotFound

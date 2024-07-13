@@ -1,51 +1,62 @@
 package budgit_test
 
 import (
-	date "cloud.google.com/go/civil"
+	"time"
+
 	"github.com/andrewthowell/budgit/budgit"
-	"github.com/google/uuid"
 )
 
-func (s *budgitSuite) TestNewTransaction() {
-	s.Run("ReturnsTransactionWithGeneratedUUID", func() {
-		transaction := budgit.NewTransaction("", "", date.Date{}, "", "", 0)
-		s.Require().NotEmpty(transaction.ID, "expected transaction to have non-empty ID")
-		_, err := uuid.Parse(transaction.ID)
-		s.NoError(err, "expected transaction to have UUID ID")
-	})
-	s.Run("ReturnsTransactionWithGivenBudgetID", func() {
-		expectedBudgetID := "budgetID"
-		transaction := budgit.NewTransaction(expectedBudgetID, "", date.Date{}, "", "", 0)
-		s.Equal(expectedBudgetID, transaction.BudgetID)
-	})
-	s.Run("ReturnsTransactionWithGivenAccountID", func() {
-		expectedAccountID := "accountID"
-		transaction := budgit.NewTransaction("", expectedAccountID, date.Date{}, "", "", 0)
-		s.Equal(expectedAccountID, transaction.AccountID)
-	})
-	s.Run("ReturnsTransactionWithGivenDate", func() {
-		expectedDate, _ := date.ParseDate("1970/01/01")
-		transaction := budgit.NewTransaction("", "", expectedDate, "", "", 0)
-		s.Equal(expectedDate, transaction.EffectiveDate)
-	})
-	s.Run("ReturnsTransactionWithGivenPayeeID", func() {
-		expectedPayeeID := "payeeID"
-		transaction := budgit.NewTransaction("", "", date.Date{}, expectedPayeeID, "", 0)
-		s.Equal(expectedPayeeID, transaction.PayeeID)
-	})
-	s.Run("ReturnsTransactionWithGivenCategoryID", func() {
-		expectedCategoryID := "categoryID"
-		transaction := budgit.NewTransaction("", "", date.Date{}, "", expectedCategoryID, 0)
-		s.Equal(expectedCategoryID, transaction.CategoryID)
-	})
-	s.Run("ReturnsTransactionWithGivenPositiveAmount", func() {
-		expectedAmount := 10
-		transaction := budgit.NewTransaction("", "", date.Date{}, "", "", expectedAmount)
-		s.Equal(expectedAmount, transaction.Amount)
-	})
-	s.Run("ReturnsTransactionWithGivenNegativeAmount", func() {
-		expectedAmount := -10
-		transaction := budgit.NewTransaction("", "", date.Date{}, "", "", expectedAmount)
-		s.Equal(expectedAmount, transaction.Amount)
-	})
+func (s *budgitSuite) TestTransaction() {
+	testCases := []struct {
+		name                           string
+		mirrorID                       string
+		transaction, mirrorTransaction *budgit.Transaction
+	}{
+		{
+			name:        "EmptyTransaction",
+			mirrorID:    "",
+			transaction: &budgit.Transaction{},
+			mirrorTransaction: &budgit.Transaction{
+				IsPayeeInternal: true,
+			},
+		},
+		{
+			name:     "PopulatedTransaction",
+			mirrorID: "mirror_id-1",
+			transaction: &budgit.Transaction{
+				ID:              "id-1",
+				EffectiveDate:   time.Date(2000, 1, 3, 0, 0, 0, 0, time.UTC),
+				AccountID:       "account_id-1",
+				PayeeID:         "payee_id-1",
+				IsPayeeInternal: true,
+				Amount:          1,
+				Cleared:         true,
+			},
+			mirrorTransaction: &budgit.Transaction{
+				ID:              "mirror_id-1",
+				EffectiveDate:   time.Date(2000, 1, 3, 0, 0, 0, 0, time.UTC),
+				AccountID:       "payee_id-1",
+				PayeeID:         "account_id-1",
+				IsPayeeInternal: false,
+				Amount:          -1,
+				Cleared:         true,
+			},
+		},
+	}
+	for _, tc := range testCases {
+		s.Run(tc.name, func() {
+			s.Run("MirroredTransactionEqualsMirrorTransaction", func() {
+				s.CMPEqual(tc.mirrorTransaction, tc.transaction.Mirror(tc.mirrorID))
+			})
+			s.Run("MirroredMirrorTransactionEqualsTransaction", func() {
+				s.CMPEqual(tc.transaction, tc.mirrorTransaction.Mirror(tc.transaction.ID))
+			})
+			s.Run("TransactionToMirrorToTransaction", func() {
+				s.CMPEqual(tc.transaction, tc.transaction.Mirror(tc.mirrorID).Mirror(tc.transaction.ID))
+			})
+			s.Run("MirrorToTransactionToMirror", func() {
+				s.CMPEqual(tc.mirrorTransaction, tc.mirrorTransaction.Mirror(tc.transaction.ID).Mirror(tc.mirrorID))
+			})
+		})
+	}
 }
