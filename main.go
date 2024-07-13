@@ -42,19 +42,12 @@ func main() {
 	}
 	defer conn.Close(context.Background())
 
-	tag, err := conn.Exec(context.Background(), `select * from accounts`)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(tag)
-
 	starlingClient, err := clients.NewStarlingClient(config.Starling.URL, config.Starling.APIToken)
 	if err != nil {
 		panic(err)
 	}
 
-	db := db.New()
-	service := svc.New(db, map[string]svc.Provider{starlingClient.ID(): starlingClient})
+	service := svc.New(conn, db.DB{}, map[string]svc.Provider{starlingClient.ID(): starlingClient})
 
 	accounts, externalAccounts, err := service.LoadAccountsFromProvider(context.Background(), starlingClient.ID())
 	if err != nil {

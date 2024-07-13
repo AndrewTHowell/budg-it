@@ -6,13 +6,14 @@ import (
 	"fmt"
 
 	"github.com/andrewthowell/budgit/budgit"
+	"github.com/andrewthowell/budgit/budgit/db"
 	"golang.org/x/exp/maps"
 )
 
 type PayeeDB interface {
-	InsertPayees(ctx context.Context, payee ...*budgit.Payee) error
-	SelectPayeesByID(ctx context.Context, payeeIDs ...string) (map[string]*budgit.Payee, error)
-	SelectPayeesByName(ctx context.Context, payeeNames ...string) (map[string]*budgit.Payee, error)
+	InsertPayees(ctx context.Context, queryer db.Queryer, payee ...*budgit.Payee) error
+	SelectPayeesByID(ctx context.Context, queryer db.Queryer, payeeIDs ...string) (map[string]*budgit.Payee, error)
+	SelectPayeesByName(ctx context.Context, queryer db.Queryer, payeeNames ...string) (map[string]*budgit.Payee, error)
 }
 
 func (s Service) CreatePayees(ctx context.Context, payees ...*budgit.Payee) ([]*budgit.Payee, error) {

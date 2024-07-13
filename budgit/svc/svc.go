@@ -2,33 +2,64 @@ package svc
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/andrewthowell/budgit/budgit"
+	"github.com/andrewthowell/budgit/budgit/db"
+	"github.com/jackc/pgx/v5"
 )
 
+type Conn interface {
+	db.Execer
+	db.Queryer
+}
+
+type TxConn interface {
+	Conn
+	BeginTx(ctx context.Context, txOptions pgx.TxOptions) (pgx.Tx, error)
+}
+
 type DB interface {
-	InsertAccounts(ctx context.Context, accounts ...*budgit.Account) error
-	SelectAccountsByID(ctx context.Context, accountIDs ...string) (map[string]*budgit.Account, error)
-	SelectAccounts(ctx context.Context) ([]*budgit.Account, error)
-
-	InsertExternalAccounts(ctx context.Context, externalAccounts ...*budgit.ExternalAccount) error
-	SelectExternalAccountsByID(ctx context.Context, externalAccountIDs ...string) (map[string]*budgit.ExternalAccount, error)
-	SelectExternalAccounts(ctx context.Context) ([]*budgit.ExternalAccount, error)
-
-	TransactionDB
+	AccountDB
 	PayeeDB
+	TransactionDB
 }
 
 type Service struct {
+	conn      TxConn
 	db        DB
 	providers map[string]Provider
 }
 
-func New(db DB, providers map[string]Provider) *Service {
+func New(conn TxConn, db DB, providers map[string]Provider) *Service {
 	return &Service{
+		conn:      conn,
 		db:        db,
 		providers: providers,
 	}
+}
+
+func (s Service) inTx(ctx context.Context, txFunc func(conn Conn) error, txOptions pgx.TxOptions) (rollbackErr error) {
+	// rollbackErr is a named return so that it can be modified in a deferred call.
+
+	tx, err := s.conn.BeginTx(ctx, txOptions)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil {
+			rollbackErr = fmt.Errorf("failed to rollback transaction: %w", err)
+		}
+	}()
+
+	if err := txFunc(tx); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+	// Reaching here means all normal errors have been avoided, but must return rollbackErr in case defer errors and the error must be returned.
+	return rollbackErr
 }
 
 func deduplicate[S ~[]E, E comparable](slice S) S {

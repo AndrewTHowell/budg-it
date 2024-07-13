@@ -7,11 +7,13 @@ import (
 	"slices"
 
 	"github.com/andrewthowell/budgit/budgit"
+	"github.com/andrewthowell/budgit/budgit/db"
+	"github.com/jackc/pgx"
 	"golang.org/x/exp/maps"
 )
 
 type TransactionDB interface {
-	InsertTransactions(ctx context.Context, transactions ...*budgit.Transaction) error
+	InsertTransactions(ctx context.Context, queryer db.Queryer, transactions ...*budgit.Transaction) error
 }
 
 func (s Service) CreateTransactions(ctx context.Context, transactions ...*budgit.Transaction) ([]*budgit.Transaction, error) {
@@ -23,6 +25,10 @@ func (s Service) CreateTransactions(ctx context.Context, transactions ...*budgit
 	if err != nil {
 		return nil, fmt.Errorf("creating transactions: %w", err)
 	}
+
+	s.inTx(ctx, func(conn Conn) error {
+		return nil
+	}, pgx.TxOptions{AccessMode: pgx.ReadOnly})
 
 	if err := s.db.InsertTransactions(ctx, transactions...); err != nil {
 		return nil, fmt.Errorf("creating transactions: %w", err)

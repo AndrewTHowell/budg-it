@@ -1,51 +1,19 @@
 package budgit
 
-import (
-	"github.com/google/uuid"
-)
+import "time"
 
-// Account is an Account, unique only within a given Budget.
+// Account is an account internal to budgit.
 type Account struct {
-	ID                string
-	Name              string
-	ExternalAccountID string
-	Balance           Balance
+	ID              string
+	Name            string
+	Balance         Balance
+	ExternalAccount *ExternalAccount
 }
 
-// NewAccount returns an Account in the given Budget.
-func NewAccount(name, externalAccountID string, balance Balance) *Account {
-	return &Account{
-		ID:                uuid.New().String(),
-		Name:              name,
-		ExternalAccountID: externalAccountID,
-		Balance:           balance,
-	}
-}
-
-func (a Account) GetID() string {
-	return a.ID
-}
-
-// ExternalAccount is an Account representing some real, external Account.
+// ExternalAccount is an Account representing some real, external Account that is attached to a budgit Account.
 type ExternalAccount struct {
-	ID                 string
-	ExternalProviderID string
-	ExternalID         string
-	Name               string
-	Balance            Balance
-}
-
-// NewExternalAccount returns an ExternalAccount.
-func NewExternalAccount(externalProviderID, externalID, name string, balance Balance) *ExternalAccount {
-	return &ExternalAccount{
-		ID:                 uuid.New().String(),
-		ExternalProviderID: externalProviderID,
-		ExternalID:         externalID,
-		Name:               name,
-		Balance:            balance,
-	}
-}
-
-func (a ExternalAccount) GetID() string {
-	return a.ID
+	ID                string
+	IntegrationID     string
+	LastSyncTimestamp time.Time
+	Balance           Balance
 }
