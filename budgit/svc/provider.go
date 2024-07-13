@@ -3,35 +3,42 @@ package svc
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/andrewthowell/budgit/budgit"
+	"github.com/andrewthowell/budgit/budgit/db/dbconvert"
+	"github.com/google/uuid"
 )
 
 type Provider interface {
 	ID() string
-	GetExternalAccounts(ctx context.Context) ([]*budgit.ExternalAccount, error)
-	GetExternalAccount(ctx context.Context, externalID string) (*budgit.ExternalAccount, error)
+	GetExternalAccounts(ctx context.Context, syncTime time.Time) ([]*budgit.ExternalAccount, error)
+	GetExternalAccount(ctx context.Context, syncTime time.Time, externalID string) (*budgit.ExternalAccount, error)
 }
 
-func (s Service) LoadAccountsFromProvider(ctx context.Context, providerID string) ([]*budgit.Account, []*budgit.ExternalAccount, error) {
-	externalAccounts, err := s.providers[providerID].GetExternalAccounts(ctx)
+func (s Service) LoadAccountsFromProvider(ctx context.Context, providerID string) ([]*budgit.Account, error) {
+	externalAccounts, err := s.providers[providerID].GetExternalAccounts(ctx, time.Now().UTC())
 	if err != nil {
-		return nil, nil, fmt.Errorf("loading accounts from %q: %w", providerID, err)
+		return nil, fmt.Errorf("loading accounts from %q: %w", providerID, err)
 	}
 
 	accounts := make([]*budgit.Account, 0, len(externalAccounts))
 	for _, externalAccount := range externalAccounts {
-		name := fmt.Sprintf("%s - %s", externalAccount.ExternalProviderID, externalAccount.Name)
-		accounts = append(accounts, budgit.NewAccount(name, externalAccount.ID, externalAccount.Balance))
+		// TODO: use Name once reinstated
+		name := fmt.Sprintf("%s - %s", externalAccount.IntegrationID, "stub") //externalAccount.Name)
+		accounts = append(accounts, &budgit.Account{
+			ID:              uuid.New().String(),
+			Name:            name,
+			Balance:         externalAccount.Balance,
+			ExternalAccount: externalAccount,
+		})
 	}
 
-	if err := s.db.InsertAccounts(ctx, accounts...); err != nil {
-		return nil, nil, fmt.Errorf("loading accounts from %q: %w", providerID, err)
+	// TODO: check for accounts not being inserted
+	if _, err := s.db.InsertAccounts(ctx, s.conn, dbconvert.FromAccounts(accounts...)...); err != nil {
+		return nil, fmt.Errorf("loading accounts from %q: %w", providerID, err)
 	}
-	if err := s.db.InsertExternalAccounts(ctx, externalAccounts...); err != nil {
-		return nil, nil, fmt.Errorf("loading accounts from %q: %w", providerID, err)
-	}
-	return accounts, externalAccounts, nil
+	return accounts, nil
 }
 
 type AccountSyncError struct {
@@ -43,30 +50,31 @@ func (e AccountSyncError) Error() string {
 	return fmt.Sprintf("syncing Account %q failed, balance synced from external account %+v does not match balance of internal account %+v", e.AccountName, e.ExternalBalance, e.InternalBalance)
 }
 
-var ErrAccountNotFound = fmt.Errorf("the requested Account does not exist")
+var (
+	ErrAccountNotFound  = fmt.Errorf("the requested Account does not exist")
+	ErrAccountNotLinked = fmt.Errorf("the requested Account is not linked to an external account and cannot be synced")
+)
 
 func (s Service) SyncAccount(ctx context.Context, accountID string) error {
-	accounts, err := s.db.SelectAccountsByID(ctx, accountID)
+	dbAccounts, err := s.db.SelectAccountsByID(ctx, s.conn, accountID)
 	if err != nil {
 		return fmt.Errorf("syncing account %q: %w", accountID, err)
 	}
-	account, ok := accounts[accountID]
+	dbAccount, ok := dbAccounts[accountID]
 	if !ok {
 		return fmt.Errorf("syncing account %q: %w", accountID, ErrAccountNotFound)
 	}
-	currentExternalAccounts, err := s.db.SelectExternalAccountsByID(ctx, account.ExternalAccountID)
-	if err != nil {
-		return fmt.Errorf("syncing account %q: %w", accountID, err)
-	}
-	currentExternalAccount, ok := currentExternalAccounts[account.ExternalAccountID]
-	if !ok {
-		return fmt.Errorf("syncing account %q: account references external account %q which does not exist", accountID, account.ExternalAccountID)
-	}
-	externalAccount, err := s.providers[currentExternalAccount.ExternalProviderID].GetExternalAccount(ctx, account.ExternalAccountID)
-	if err != nil {
-		return fmt.Errorf("syncing account %q: %w", accountID, err)
+	account := dbconvert.ToAccounts(dbAccount)[0]
+
+	if account.ExternalAccount == nil {
+		// Account is not linked, no need to sync
+		return ErrAccountNotLinked
 	}
 
+	externalAccount, err := s.providers[account.ExternalAccount.IntegrationID].GetExternalAccount(ctx, time.Now().UTC(), account.ExternalAccount.ID)
+	if err != nil {
+		return fmt.Errorf("syncing account %q: %w", accountID, err)
+	}
 	if account.Balance != externalAccount.Balance {
 		return AccountSyncError{
 			AccountName:     account.Name,
@@ -74,7 +82,11 @@ func (s Service) SyncAccount(ctx context.Context, accountID string) error {
 			InternalBalance: account.Balance,
 		}
 	}
-	if err := s.db.InsertExternalAccounts(ctx, externalAccount); err != nil {
+	account.ExternalAccount.LastSyncTimestamp = time.Now().UTC()
+	account.ExternalAccount = externalAccount
+
+	// TODO: check for accounts not being inserted
+	if _, err := s.db.InsertAccounts(ctx, s.conn, dbconvert.FromAccounts(account)...); err != nil {
 		return fmt.Errorf("syncing account %q: %w", accountID, err)
 	}
 	return nil

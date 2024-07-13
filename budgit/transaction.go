@@ -16,13 +16,17 @@ type Transaction struct {
 	Cleared         bool
 }
 
+// Mirror mirrors the transaction, by returning another with the same fields but:
+//   - ID is replaced with given ID
+//   - Account and Payee IDs are swapped
+//   - Amount is negated
 func (t Transaction) Mirror(id string) *Transaction {
 	return &Transaction{
 		ID:              id,
 		AccountID:       t.PayeeID,
 		EffectiveDate:   t.EffectiveDate,
 		PayeeID:         t.AccountID,
-		IsPayeeInternal: !t.IsPayeeInternal,
+		IsPayeeInternal: t.IsPayeeInternal,
 		CategoryID:      t.CategoryID,
 		Amount:          -t.Amount,
 		Cleared:         t.Cleared,

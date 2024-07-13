@@ -13,12 +13,10 @@ func (s *budgitSuite) TestTransaction() {
 		transaction, mirrorTransaction *budgit.Transaction
 	}{
 		{
-			name:        "EmptyTransaction",
-			mirrorID:    "",
-			transaction: &budgit.Transaction{},
-			mirrorTransaction: &budgit.Transaction{
-				IsPayeeInternal: true,
-			},
+			name:              "EmptyTransaction",
+			mirrorID:          "",
+			transaction:       &budgit.Transaction{},
+			mirrorTransaction: &budgit.Transaction{},
 		},
 		{
 			name:     "PopulatedTransaction",
@@ -37,7 +35,7 @@ func (s *budgitSuite) TestTransaction() {
 				EffectiveDate:   time.Date(2000, 1, 3, 0, 0, 0, 0, time.UTC),
 				AccountID:       "payee_id-1",
 				PayeeID:         "account_id-1",
-				IsPayeeInternal: false,
+				IsPayeeInternal: true,
 				Amount:          -1,
 				Cleared:         true,
 			},

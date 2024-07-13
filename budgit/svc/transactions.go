@@ -8,34 +8,40 @@ import (
 
 	"github.com/andrewthowell/budgit/budgit"
 	"github.com/andrewthowell/budgit/budgit/db"
+	"github.com/andrewthowell/budgit/budgit/db/dbconvert"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"golang.org/x/exp/maps"
 )
 
 type TransactionDB interface {
-	InsertTransactions(ctx context.Context, queryer db.Queryer, transactions ...*budgit.Transaction) error
+	InsertTransactions(ctx context.Context, queryer db.Queryer, transactions ...*db.Transaction) ([]string, error)
 }
 
 func (s Service) CreateTransactions(ctx context.Context, transactions ...*budgit.Transaction) ([]*budgit.Transaction, error) {
-	if err := s.validateTransactions(ctx, transactions...); err != nil {
-		return nil, fmt.Errorf("creating transactions: %w", err)
-	}
+	var createdTransactions []*budgit.Transaction
+	err := s.inTx(ctx, func(conn Conn) error {
+		if err := s.validateTransactions(ctx, conn, transactions...); err != nil {
+			return err
+		}
 
-	transactions, err := s.addMirrorTransactions(ctx, transactions...)
+		transactions, err := s.appendMirrorTransactions(transactions...)
+		if err != nil {
+			return err
+		}
+
+		// TODO: check for transactions not being inserted
+		if _, err := s.db.InsertTransactions(ctx, conn, dbconvert.FromTransactions(transactions...)...); err != nil {
+			return err
+		}
+		createdTransactions = transactions
+		// Update Account/Category Balances
+		return nil
+	}, pgx.TxOptions{AccessMode: pgx.ReadWrite})
 	if err != nil {
 		return nil, fmt.Errorf("creating transactions: %w", err)
 	}
-
-	s.inTx(ctx, func(conn Conn) error {
-		return nil
-	}, pgx.TxOptions{AccessMode: pgx.ReadOnly})
-
-	if err := s.db.InsertTransactions(ctx, transactions...); err != nil {
-		return nil, fmt.Errorf("creating transactions: %w", err)
-	}
-	// Update Account/Category Balances
-
-	return transactions, nil
+	return createdTransactions, nil
 }
 
 type MissingAccountsError struct {
@@ -54,7 +60,7 @@ func (e MissingPayeesError) Error() string {
 	return fmt.Sprintf("transactions reference Payees that do not exist: %+v", e.PayeeIDs)
 }
 
-func (s Service) validateTransactions(ctx context.Context, transactions ...*budgit.Transaction) error {
+func (s Service) validateTransactions(ctx context.Context, conn Conn, transactions ...*budgit.Transaction) error {
 	errs := []error{}
 
 	accountIDs := make([]string, 0, len(transactions))
@@ -69,7 +75,7 @@ func (s Service) validateTransactions(ctx context.Context, transactions ...*budg
 	}
 
 	uniqueAccountIDs := deduplicate(accountIDs)
-	foundAccounts, err := s.db.SelectAccountsByID(ctx, uniqueAccountIDs...)
+	foundAccounts, err := s.db.SelectAccountsByID(ctx, conn, uniqueAccountIDs...)
 	if err != nil {
 		return fmt.Errorf("validating transactions: %w", err)
 	}
@@ -79,7 +85,7 @@ func (s Service) validateTransactions(ctx context.Context, transactions ...*budg
 	}
 
 	uniquePayeeIDs := deduplicate(payeeIDs)
-	foundPayees, err := s.db.SelectPayeesByID(ctx, uniquePayeeIDs...)
+	foundPayees, err := s.db.SelectPayeesByID(ctx, conn, uniquePayeeIDs...)
 	if err != nil {
 		return fmt.Errorf("validating transactions: %w", err)
 	}
@@ -94,11 +100,11 @@ func (s Service) validateTransactions(ctx context.Context, transactions ...*budg
 	return nil
 }
 
-func (s Service) addMirrorTransactions(_ context.Context, transactions ...*budgit.Transaction) ([]*budgit.Transaction, error) {
+func (s Service) appendMirrorTransactions(transactions ...*budgit.Transaction) ([]*budgit.Transaction, error) {
 	mirrorTransactions := make([]*budgit.Transaction, 0, len(transactions))
 	for _, transaction := range transactions {
 		if transaction.IsPayeeInternal {
-			mirrorTransactions = append(mirrorTransactions, transaction.Mirror())
+			mirrorTransactions = append(mirrorTransactions, transaction.Mirror(uuid.New().String()))
 		}
 	}
 	return slices.Concat(transactions, mirrorTransactions), nil

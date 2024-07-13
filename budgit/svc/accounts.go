@@ -6,13 +6,13 @@ import (
 
 	"github.com/andrewthowell/budgit/budgit"
 	"github.com/andrewthowell/budgit/budgit/db"
+	"github.com/andrewthowell/budgit/budgit/db/dbconvert"
 )
 
 type AccountDB interface {
-	InsertAccounts(ctx context.Context, queryer db.Queryer, account ...*db.Account) error
+	InsertAccounts(ctx context.Context, queryer db.Queryer, account ...*db.Account) ([]string, error)
 	SelectAccounts(ctx context.Context, queryer db.Queryer) ([]*db.Account, error)
 	SelectAccountsByID(ctx context.Context, queryer db.Queryer, accountIDs ...string) (map[string]*db.Account, error)
-	SelectAccountsByName(ctx context.Context, queryer db.Queryer, accountNames ...string) (map[string]*d.Account, error)
 }
 
 func (s Service) ListAccounts(ctx context.Context) ([]*budgit.Account, error) {
@@ -20,5 +20,5 @@ func (s Service) ListAccounts(ctx context.Context) ([]*budgit.Account, error) {
 	if err != nil {
 		return nil, fmt.Errorf("listing accounts: %w", err)
 	}
-	return accounts, nil
+	return dbconvert.ToAccounts(accounts...), nil
 }

@@ -4,22 +4,16 @@ A simple zero-based budgeting tool which aims to take the pain out of tracking y
 
 ## Next Steps
 
-1. Start first integration with Bank
-  - Test out the adaptor pattern required
-  - Get used to OAuth
-  - Useful to see how Bank APIs have modeled their resources and APIs, copy ~~good~~ (turns out, bank APIs kinda suck) practices
-2. Fill out remaining resources
-  - Payee
-  - Category
-3. Build up storage layer
-4. Add domain validation
-5. Build out journeys
+1. Add Name back to ExternalAccount
+2. Add resilience to failed transactions
+3. Add domain validation
+4. Build out journeys
   - Account management
   - Importing transactions  
-6. Start zero-based budgeting logic
+5. Start zero-based budgeting logic
   - Assign funds to categories
   - Create targets
-7. Wrap this in Docker
+6. Wrap this in Docker
 
 ## Contributors
 

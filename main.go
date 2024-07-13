@@ -49,16 +49,12 @@ func main() {
 
 	service := svc.New(conn, db.DB{}, map[string]svc.Provider{starlingClient.ID(): starlingClient})
 
-	accounts, externalAccounts, err := service.LoadAccountsFromProvider(context.Background(), starlingClient.ID())
+	accounts, err := service.LoadAccountsFromProvider(context.Background(), starlingClient.ID())
 	if err != nil {
 		panic(err)
 	}
 	fmt.Println(len(accounts), "accounts")
 	for _, account := range accounts {
-		fmt.Println(fmt.Sprintf("%+v", account))
-	}
-	fmt.Println(len(externalAccounts), "externalAccounts")
-	for _, account := range externalAccounts {
 		fmt.Println(fmt.Sprintf("%+v", account))
 	}
 }
