@@ -10,16 +10,13 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/joho/godotenv"
 	"github.com/kelseyhightower/envconfig"
+	"go.uber.org/zap"
 )
 
 type Config struct {
 	DB       *DBConfig     `required:"true" envconfig:"db"`
+	Logger   *LoggerConfig `required:"true" envconfig:"logger"`
 	Starling *ClientConfig `required:"true" envconfig:"starling"`
-}
-
-type ClientConfig struct {
-	URL      string `required:"true" envconfig:"url"`
-	APIToken string `required:"true" envconfig:"api_token"`
 }
 
 type DBConfig struct {
@@ -29,11 +26,29 @@ type DBConfig struct {
 	Port     string `required:"true" envconfig:"port"`
 }
 
+type LoggerConfig struct {
+	IsDev bool `required:"true" envconfig:"is_dev"`
+}
+
+type ClientConfig struct {
+	URL      string `required:"true" envconfig:"url"`
+	APIToken string `required:"true" envconfig:"api_token"`
+}
+
 func main() {
 	config, err := loadConfigFromEnv()
 	if err != nil {
 		panic(err)
 	}
+
+	logger, err := zap.NewProduction()
+	if config.Logger.IsDev {
+		logger, err = zap.NewDevelopment()
+	}
+	if err != nil {
+		panic(err)
+	}
+	logger.Info("Starting Budgit")
 
 	url := fmt.Sprintf("postgres://%s:%s@%s:%s?sslmode=disable", config.DB.User, config.DB.Password, config.DB.Host, config.DB.Port)
 	conn, err := pgx.Connect(context.Background(), url)
