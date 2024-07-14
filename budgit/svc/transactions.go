@@ -25,7 +25,7 @@ func (s Service) CreateTransactions(ctx context.Context, transactions ...*budgit
 			return err
 		}
 
-		transactions, err := s.appendMirrorTransactions(transactions...)
+		transactions, err := appendMirrorTransactions(transactions...)
 		if err != nil {
 			return err
 		}
@@ -34,8 +34,24 @@ func (s Service) CreateTransactions(ctx context.Context, transactions ...*budgit
 		if _, err := s.db.InsertTransactions(ctx, conn, dbconvert.FromTransactions(transactions...)...); err != nil {
 			return err
 		}
+
+		balanceChangeByAccountID := balanceChangesByAccount(transactions)
+		dbAccounts, err := s.db.SelectAccountsByID(ctx, conn, maps.Keys(balanceChangeByAccountID)...)
+		if err != nil {
+			return fmt.Errorf("updating affected account balances: %w", err)
+		}
+		accounts := dbconvert.ToAccounts(maps.Values(dbAccounts)...)
+
+		for _, account := range accounts {
+			account.Balance.Add(balanceChangeByAccountID[account.ID])
+		}
+		if _, err := s.db.InsertAccounts(ctx, s.conn, dbconvert.FromAccounts(accounts...)...); err != nil {
+			return fmt.Errorf("updating affected account balances: %w", err)
+		}
+
+		// TODO: Update Category Balances
+
 		createdTransactions = transactions
-		// Update Account/Category Balances
 		return nil
 	}, pgx.TxOptions{AccessMode: pgx.ReadWrite})
 	if err != nil {
@@ -100,7 +116,7 @@ func (s Service) validateTransactions(ctx context.Context, conn Conn, transactio
 	return nil
 }
 
-func (s Service) appendMirrorTransactions(transactions ...*budgit.Transaction) ([]*budgit.Transaction, error) {
+func appendMirrorTransactions(transactions ...*budgit.Transaction) ([]*budgit.Transaction, error) {
 	mirrorTransactions := make([]*budgit.Transaction, 0, len(transactions))
 	for _, transaction := range transactions {
 		if transaction.IsPayeeInternal {
@@ -108,4 +124,12 @@ func (s Service) appendMirrorTransactions(transactions ...*budgit.Transaction) (
 		}
 	}
 	return slices.Concat(transactions, mirrorTransactions), nil
+}
+
+func balanceChangesByAccount(transactions []*budgit.Transaction) map[string]budgit.Balance {
+	balanceChangeByAccountID := make(map[string]budgit.Balance, len(transactions))
+	for _, transaction := range transactions {
+		balanceChangeByAccountID[transaction.AccountID] = balanceChangeByAccountID[transaction.AccountID].AddAmount(transaction.Amount, transaction.Cleared)
+	}
+	return balanceChangeByAccountID
 }
