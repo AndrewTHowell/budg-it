@@ -7,6 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
+	"go.uber.org/zap"
 )
 
 type Transaction struct {
@@ -33,6 +34,8 @@ var (
 )
 
 func (db DB) InsertTransactions(ctx context.Context, queryer Queryer, transactions ...*Transaction) ([]string, error) {
+	db.log.Debugw("Inserting transactions", zap.Int("number_of_transactions", len(transactions)))
+
 	sql := fmt.Sprintf(`
 		INSERT INTO transactions (%[1]s)
 		(
@@ -57,15 +60,19 @@ func (db DB) InsertTransactions(ctx context.Context, queryer Queryer, transactio
 		return nil, fmt.Errorf("inserting %d transactions: %w", len(transactions), err)
 	}
 	defer rows.Close()
+	db.log.Debugw("Inserted transactions", zap.Int64("rows_affected", rows.CommandTag().RowsAffected()))
 
 	ids, err := rowsToIDs(rows)
 	if err != nil {
 		return nil, fmt.Errorf("inserting %d transactions: %w", len(transactions), err)
 	}
+	db.log.Debugw("Inserted transactions scanned", zap.String("inserted_ids", fmt.Sprintf("%v", ids)))
 	return ids, nil
 }
 
 func (db DB) SelectTransactions(ctx context.Context, queryer Queryer) ([]*Transaction, error) {
+	db.log.Debug("Selecting transactions")
+
 	sql := fmt.Sprintf(`
 		SELECT %[1]s
 		FROM transactions
@@ -77,15 +84,44 @@ func (db DB) SelectTransactions(ctx context.Context, queryer Queryer) ([]*Transa
 		return nil, fmt.Errorf("selecting transactions: %w", err)
 	}
 	defer rows.Close()
+	db.log.Debugw("Selected transactions", zap.Int64("rows_affected", rows.CommandTag().RowsAffected()))
 
 	transactions, err := pgx.CollectRows(rows, pgx.RowToStructByName[Transaction])
 	if err != nil {
 		return nil, fmt.Errorf("selecting transactions: %w", err)
 	}
+	db.log.Debugw("Selected transactions scanned", zap.Int("numer_of_transactions", len(transactions)))
+	return structsToPointers(transactions), nil
+}
+
+func (db DB) SelectTransactionsByAccount(ctx context.Context, queryer Queryer, accountID string) ([]*Transaction, error) {
+	db.log.Debug("Selecting transactions by account")
+
+	sql := fmt.Sprintf(`
+		SELECT %[1]s
+		FROM transactions
+		WHERE account_id = $1
+		ORDER BY effective_date, amount
+	`, transactionColumnsStr)
+
+	rows, err := queryer.Query(ctx, sql, pgtype.Text{String: accountID, Valid: true})
+	if err != nil {
+		return nil, fmt.Errorf("selecting transactions by name: %w", err)
+	}
+	defer rows.Close()
+	db.log.Debugw("Selected transactions", zap.Int64("rows_affected", rows.CommandTag().RowsAffected()))
+
+	transactions, err := pgx.CollectRows(rows, pgx.RowToStructByName[Transaction])
+	if err != nil {
+		return nil, fmt.Errorf("selecting transactions by name: %w", err)
+	}
+	db.log.Debugw("Selected transactions scanned", zap.Int("numer_of_transactions", len(transactions)))
 	return structsToPointers(transactions), nil
 }
 
 func (db DB) SelectTransactionsByID(ctx context.Context, queryer Queryer, transactionIDs ...string) (map[string]*Transaction, error) {
+	db.log.Debugw("Selecting transactions by ID", zap.String("transaction_ids", fmt.Sprintf("%+v", transactionIDs)))
+
 	sql := fmt.Sprintf(`
 		SELECT %[1]s
 		FROM transactions
@@ -102,34 +138,14 @@ func (db DB) SelectTransactionsByID(ctx context.Context, queryer Queryer, transa
 		return nil, fmt.Errorf("selecting transactions by ID: %w", err)
 	}
 	defer rows.Close()
+	db.log.Debugw("Selected transactions by ID", zap.Int64("rows_affected", rows.CommandTag().RowsAffected()))
 
 	transactions, err := pgx.CollectRows(rows, pgx.RowToStructByName[Transaction])
 	if err != nil {
 		return nil, fmt.Errorf("selecting transactions by ID: %w", err)
 	}
+	db.log.Debugw("Selected transactions by ID scanned", zap.Int("numer_of_transactions", len(transactions)))
 	return mapByID(structsToPointers(transactions)), nil
-}
-
-func (db DB) SelectTransactionsByAccount(ctx context.Context, queryer Queryer, accountID string) ([]*Transaction, error) {
-	sql := fmt.Sprintf(`
-		SELECT %[1]s
-		FROM transactions
-		WHERE account_id = $1
-		ORDER BY effective_date, amount
-	`, transactionColumnsStr)
-
-	rows, err := queryer.Query(ctx, sql, pgtype.Text{String: accountID, Valid: true})
-	if err != nil {
-		return nil, fmt.Errorf("selecting transactions by name: %w", err)
-	}
-	defer rows.Close()
-
-	transactions, err := pgx.CollectRows(rows, pgx.RowToStructByName[Transaction])
-	if err != nil {
-		return nil, fmt.Errorf("selecting transactions by name: %w", err)
-	}
-
-	return structsToPointers(transactions), nil
 }
 
 func transactionsToArgs(transactions []*Transaction) []any {

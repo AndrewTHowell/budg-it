@@ -7,6 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
+	"go.uber.org/zap"
 )
 
 type Account struct {
@@ -33,6 +34,8 @@ var (
 )
 
 func (db DB) InsertAccounts(ctx context.Context, queryer Queryer, accounts ...*Account) ([]string, error) {
+	db.log.Debugw("Inserting accounts", zap.Int("number_of_accounts", len(accounts)))
+
 	sql := fmt.Sprintf(`
 		INSERT INTO accounts (%[1]s)
 		(
@@ -60,15 +63,19 @@ func (db DB) InsertAccounts(ctx context.Context, queryer Queryer, accounts ...*A
 		return nil, fmt.Errorf("inserting %d accounts: %w", len(accounts), err)
 	}
 	defer rows.Close()
+	db.log.Debugw("Inserted accounts", zap.Int64("rows_affected", rows.CommandTag().RowsAffected()))
 
 	ids, err := rowsToIDs(rows)
 	if err != nil {
 		return nil, fmt.Errorf("inserting %d accounts: %w", len(accounts), err)
 	}
+	db.log.Debugw("Inserted accounts scanned", zap.String("inserted_ids", fmt.Sprintf("%v", ids)))
 	return ids, nil
 }
 
 func (db DB) SelectAccounts(ctx context.Context, queryer Queryer) ([]*Account, error) {
+	db.log.Debug("Selecting accounts")
+
 	sql := fmt.Sprintf(`
 		SELECT %[1]s
 		FROM accounts
@@ -80,15 +87,19 @@ func (db DB) SelectAccounts(ctx context.Context, queryer Queryer) ([]*Account, e
 		return nil, fmt.Errorf("selecting accounts: %w", err)
 	}
 	defer rows.Close()
+	db.log.Debugw("Selected accounts", zap.Int64("rows_affected", rows.CommandTag().RowsAffected()))
 
 	accounts, err := pgx.CollectRows(rows, pgx.RowToStructByName[Account])
 	if err != nil {
 		return nil, fmt.Errorf("selecting accounts: %w", err)
 	}
+	db.log.Debugw("Selected accounts scanned", zap.Int("numer_of_accounts", len(accounts)))
 	return structsToPointers(accounts), nil
 }
 
 func (db DB) SelectAccountsByID(ctx context.Context, queryer Queryer, accountIDs ...string) (map[string]*Account, error) {
+	db.log.Debugw("Selecting accounts by ID", zap.String("account_ids", fmt.Sprintf("%+v", accountIDs)))
+
 	sql := fmt.Sprintf(`
 		SELECT %[1]s
 		FROM accounts
@@ -105,11 +116,13 @@ func (db DB) SelectAccountsByID(ctx context.Context, queryer Queryer, accountIDs
 		return nil, fmt.Errorf("selecting accounts by ID: %w", err)
 	}
 	defer rows.Close()
+	db.log.Debugw("Selected accounts by ID", zap.Int64("rows_affected", rows.CommandTag().RowsAffected()))
 
 	accounts, err := pgx.CollectRows(rows, pgx.RowToStructByName[Account])
 	if err != nil {
 		return nil, fmt.Errorf("selecting accounts by ID: %w", err)
 	}
+	db.log.Debugw("Selected accounts by ID scanned", zap.Int("numer_of_accounts", len(accounts)))
 	return mapByID(structsToPointers(accounts)), nil
 }
 

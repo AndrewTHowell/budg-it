@@ -9,7 +9,7 @@ import (
 )
 
 func (s *dbSuite) TestInsertAccounts() {
-	ids, err := db.DB{}.InsertAccounts(context.Background(), s.conn, []*db.Account{
+	ids, err := s.db.InsertAccounts(context.Background(), s.conn, []*db.Account{
 		{
 			ID:                        pgtype.Text{String: "id-1", Valid: true},
 			Name:                      pgtype.Text{String: "name-1", Valid: true},
@@ -90,10 +90,10 @@ func (s *dbSuite) TestSelectAccounts() {
 			ExternalEffectiveBalance:  pgtype.Int8{Int64: 6, Valid: true},
 		},
 	}
-	_, err := db.DB{}.InsertAccounts(context.Background(), s.conn, expectedAccounts...)
+	_, err := s.db.InsertAccounts(context.Background(), s.conn, expectedAccounts...)
 	s.Require().NoError(err)
 
-	actualAccounts, err := db.DB{}.SelectAccounts(context.Background(), s.conn)
+	actualAccounts, err := s.db.SelectAccounts(context.Background(), s.conn)
 	s.NoError(err)
 	s.CMPEqual(expectedAccounts, actualAccounts)
 }
@@ -137,14 +137,14 @@ func (s *dbSuite) TestSelectAccountsByID() {
 			ExternalEffectiveBalance:  pgtype.Int8{Int64: 6, Valid: true},
 		},
 	}
-	_, err := db.DB{}.InsertAccounts(context.Background(), s.conn, accounts...)
+	_, err := s.db.InsertAccounts(context.Background(), s.conn, accounts...)
 	s.Require().NoError(err)
 
 	expectedAccounts := map[string]*db.Account{
 		"id-1": accounts[0],
 		"id-3": accounts[2],
 	}
-	actualAccounts, err := db.DB{}.SelectAccountsByID(context.Background(), s.conn, "id-1", "id-3")
+	actualAccounts, err := s.db.SelectAccountsByID(context.Background(), s.conn, "id-1", "id-3")
 	s.NoError(err)
 	s.CMPEqual(expectedAccounts, actualAccounts)
 }

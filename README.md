@@ -4,7 +4,7 @@ A simple zero-based budgeting tool which aims to take the pain out of tracking y
 
 ## Next Steps
 
-1. Add logging
+1. Add budgit namespacing
 2. Add resilience to failed transactions
 3. Add domain validation
 4. Build out journeys

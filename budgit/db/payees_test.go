@@ -8,7 +8,7 @@ import (
 )
 
 func (s *dbSuite) TestInsertPayees() {
-	ids, err := db.DB{}.InsertPayees(context.Background(), s.conn, []*db.Payee{
+	ids, err := s.db.InsertPayees(context.Background(), s.conn, []*db.Payee{
 		{
 			ID:   pgtype.Text{String: "id-1", Valid: true},
 			Name: pgtype.Text{String: "name-1", Valid: true},
@@ -41,10 +41,10 @@ func (s *dbSuite) TestSelectPayees() {
 			Name: pgtype.Text{String: "name-3", Valid: true},
 		},
 	}
-	_, err := db.DB{}.InsertPayees(context.Background(), s.conn, expectedPayees...)
+	_, err := s.db.InsertPayees(context.Background(), s.conn, expectedPayees...)
 	s.Require().NoError(err)
 
-	actualPayees, err := db.DB{}.SelectPayees(context.Background(), s.conn)
+	actualPayees, err := s.db.SelectPayees(context.Background(), s.conn)
 	s.NoError(err)
 	s.CMPEqual(expectedPayees, actualPayees)
 }
@@ -64,14 +64,14 @@ func (s *dbSuite) TestSelectPayeesByID() {
 			Name: pgtype.Text{String: "name-3", Valid: true},
 		},
 	}
-	_, err := db.DB{}.InsertPayees(context.Background(), s.conn, payees...)
+	_, err := s.db.InsertPayees(context.Background(), s.conn, payees...)
 	s.Require().NoError(err)
 
 	expectedPayees := map[string]*db.Payee{
 		"id-1": payees[0],
 		"id-3": payees[2],
 	}
-	actualPayees, err := db.DB{}.SelectPayeesByID(context.Background(), s.conn, "id-1", "id-3")
+	actualPayees, err := s.db.SelectPayeesByID(context.Background(), s.conn, "id-1", "id-3")
 	s.NoError(err)
 	s.CMPEqual(expectedPayees, actualPayees)
 }
@@ -91,14 +91,14 @@ func (s *dbSuite) TestSelectPayeesByName() {
 			Name: pgtype.Text{String: "name-3", Valid: true},
 		},
 	}
-	_, err := db.DB{}.InsertPayees(context.Background(), s.conn, payees...)
+	_, err := s.db.InsertPayees(context.Background(), s.conn, payees...)
 	s.Require().NoError(err)
 
 	expectedPayees := map[string]*db.Payee{
 		"name-1": payees[0],
 		"name-3": payees[2],
 	}
-	actualPayees, err := db.DB{}.SelectPayeesByName(context.Background(), s.conn, "name-1", "name-3")
+	actualPayees, err := s.db.SelectPayeesByName(context.Background(), s.conn, "name-1", "name-3")
 	s.NoError(err)
 	s.CMPEqual(expectedPayees, actualPayees)
 }

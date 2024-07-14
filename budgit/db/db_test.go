@@ -9,12 +9,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/andrewthowell/budgit/budgit/db"
 	"github.com/google/go-cmp/cmp"
 	"github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/suite"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
+	"go.uber.org/zap"
 )
 
 func TestDB(t *testing.T) {
@@ -25,7 +27,9 @@ type dbSuite struct {
 	suite.Suite
 
 	pgContainer testcontainers.Container
-	conn        *pgx.Conn
+
+	db   db.DB
+	conn *pgx.Conn
 }
 
 func (s *dbSuite) SetupSuite() {
@@ -56,6 +60,8 @@ func (s *dbSuite) SetupSuite() {
 	conn, err := pgx.Connect(context.Background(), connString)
 	s.Require().NoError(err, "unexpected error connecting to postgres container")
 	s.conn = conn
+
+	s.db = db.New(zap.NewNop().Sugar())
 }
 
 func (s *dbSuite) TearDownTest() {

@@ -9,7 +9,7 @@ import (
 )
 
 func (s *dbSuite) TestInsertTransactions() {
-	ids, err := db.DB{}.InsertTransactions(context.Background(), s.conn, []*db.Transaction{
+	ids, err := s.db.InsertTransactions(context.Background(), s.conn, []*db.Transaction{
 		{
 			ID:              pgtype.Text{String: "id-1", Valid: true},
 			EffectiveDate:   pgtype.Date{Time: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC), Valid: true},
@@ -72,10 +72,10 @@ func (s *dbSuite) TestSelectTransactions() {
 			Cleared:         pgtype.Bool{Bool: true, Valid: true},
 		},
 	}
-	_, err := db.DB{}.InsertTransactions(context.Background(), s.conn, expectedTransactions...)
+	_, err := s.db.InsertTransactions(context.Background(), s.conn, expectedTransactions...)
 	s.Require().NoError(err)
 
-	actualTransactions, err := db.DB{}.SelectTransactions(context.Background(), s.conn)
+	actualTransactions, err := s.db.SelectTransactions(context.Background(), s.conn)
 	s.NoError(err)
 	s.CMPEqual(expectedTransactions, actualTransactions)
 }
@@ -110,14 +110,14 @@ func (s *dbSuite) TestSelectTransactionsByID() {
 			Cleared:         pgtype.Bool{Bool: true, Valid: true},
 		},
 	}
-	_, err := db.DB{}.InsertTransactions(context.Background(), s.conn, transactions...)
+	_, err := s.db.InsertTransactions(context.Background(), s.conn, transactions...)
 	s.Require().NoError(err)
 
 	expectedTransactions := map[string]*db.Transaction{
 		"id-1": transactions[0],
 		"id-3": transactions[2],
 	}
-	actualTransactions, err := db.DB{}.SelectTransactionsByID(context.Background(), s.conn, "id-1", "id-3")
+	actualTransactions, err := s.db.SelectTransactionsByID(context.Background(), s.conn, "id-1", "id-3")
 	s.NoError(err)
 	s.CMPEqual(expectedTransactions, actualTransactions)
 }
@@ -152,14 +152,14 @@ func (s *dbSuite) TestSelectTransactionsByAccount() {
 			Cleared:         pgtype.Bool{Bool: true, Valid: true},
 		},
 	}
-	_, err := db.DB{}.InsertTransactions(context.Background(), s.conn, transactions...)
+	_, err := s.db.InsertTransactions(context.Background(), s.conn, transactions...)
 	s.Require().NoError(err)
 
 	expectedTransactions := []*db.Transaction{
 		transactions[0],
 		transactions[2],
 	}
-	actualTransactions, err := db.DB{}.SelectTransactionsByAccount(context.Background(), s.conn, "account-id-1")
+	actualTransactions, err := s.db.SelectTransactionsByAccount(context.Background(), s.conn, "account-id-1")
 	s.NoError(err)
 	s.CMPEqual(expectedTransactions, actualTransactions)
 }
