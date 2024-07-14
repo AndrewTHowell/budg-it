@@ -11,7 +11,6 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 )
 
 type Config struct {
@@ -83,7 +82,6 @@ func newLogger(config *Config) (*zap.SugaredLogger, error) {
 		cfg, encoderCfg = zap.NewDevelopmentConfig(), zap.NewDevelopmentEncoderConfig()
 	}
 
-	encoderCfg.EncodeTime = zapcore.RFC3339NanoTimeEncoder
 	cfg.EncoderConfig = encoderCfg
 
 	l, err := cfg.Build()
