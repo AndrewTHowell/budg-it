@@ -4,6 +4,7 @@ A simple zero-based budgeting tool which aims to take the pain out of tracking y
 
 ## Next Steps
 
+1. Use append-only schema
 1. Add budgit namespacing
 2. Add integration tests
 3. Add resilience
