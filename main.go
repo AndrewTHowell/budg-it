@@ -11,12 +11,20 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 type Config struct {
 	DB       *DBConfig     `required:"true" envconfig:"db"`
 	Logger   *LoggerConfig `required:"true" envconfig:"logger"`
 	Starling *ClientConfig `required:"true" envconfig:"starling"`
+}
+
+func (c Config) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	enc.AddObject("DB", c.DB)
+	enc.AddObject("Logger", c.Logger)
+	enc.AddObject("Starling", c.Starling)
+	return nil
 }
 
 type DBConfig struct {
@@ -26,13 +34,32 @@ type DBConfig struct {
 	Port     string `required:"true" envconfig:"port"`
 }
 
+func (c DBConfig) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	enc.AddString("User", c.User)
+	enc.AddString("Password", "**REDACTED**")
+	enc.AddString("Host", c.Host)
+	enc.AddString("Port", c.Port)
+	return nil
+}
+
 type LoggerConfig struct {
 	IsDev bool `required:"true" envconfig:"is_dev"`
+}
+
+func (c LoggerConfig) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	enc.AddBool("IsDev", c.IsDev)
+	return nil
 }
 
 type ClientConfig struct {
 	URL      string `required:"true" envconfig:"url"`
 	APIToken string `required:"true" envconfig:"api_token"`
+}
+
+func (c ClientConfig) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	enc.AddString("URL", c.URL)
+	enc.AddString("APIToken", "**REDACTED**")
+	return nil
 }
 
 func main() {
@@ -47,7 +74,7 @@ func main() {
 	}
 	defer log.Sync()
 
-	log.Info("Starting Budgit")
+	log.Infow("Starting Budgit", zap.Any("config", config))
 
 	url := fmt.Sprintf("postgres://%s:%s@%s:%s/budgit?sslmode=disable", config.DB.User, config.DB.Password, config.DB.Host, config.DB.Port)
 	conn, err := pgx.Connect(context.Background(), url)
