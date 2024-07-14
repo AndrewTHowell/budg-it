@@ -10,7 +10,8 @@ CREATE TABLE
     external_integration_id TEXT,
     external_last_sync_timestamp TIMESTAMPTZ,
     external_cleared_balance BIGINT,
-    external_effective_balance BIGINT
+    external_effective_balance BIGINT,
+    UNIQUE(external_id, external_integration_id)
   );
 
 CREATE TABLE
