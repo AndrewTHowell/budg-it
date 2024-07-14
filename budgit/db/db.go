@@ -7,9 +7,16 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"go.uber.org/zap"
 )
 
-type DB struct{}
+type DB struct {
+	log *zap.SugaredLogger
+}
+
+func New(log *zap.SugaredLogger) DB {
+	return DB{log: log}
+}
 
 type Queryer interface {
 	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)

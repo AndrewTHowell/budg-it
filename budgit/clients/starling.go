@@ -10,15 +10,19 @@ import (
 
 	"github.com/andrewthowell/budgit/budgit"
 	"github.com/andrewthowell/budgit/integrations/starling"
+	"go.uber.org/zap"
 )
 
 const starlingIntegrationID = "starling"
 
 type Client struct {
+	log    *zap.SugaredLogger
 	client *starling.ClientWithResponses
 }
 
-func NewStarlingClient(url, apiToken string) (*Client, error) {
+func NewStarlingClient(log *zap.SugaredLogger, url, apiToken string) (*Client, error) {
+	log.Info("Starting Starling client", zap.String("url", url))
+
 	client, err := starling.NewClientWithResponses(
 		url,
 		starling.WithRequestEditorFn(func(ctx context.Context, req *http.Request) error {
@@ -27,9 +31,12 @@ func NewStarlingClient(url, apiToken string) (*Client, error) {
 		}),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("initialising starling client: %w", err)
+		return nil, fmt.Errorf("initialising Starling client: %w", err)
 	}
-	return &Client{client: client}, nil
+	return &Client{
+		log:    log,
+		client: client,
+	}, nil
 }
 
 func (c Client) ID() string { return starlingIntegrationID }

@@ -50,28 +50,31 @@ func main() {
 
 	log.Info("Starting Budgit")
 
-	url := fmt.Sprintf("postgres://%s:%s@%s:%s?sslmode=disable", config.DB.User, config.DB.Password, config.DB.Host, config.DB.Port)
+	url := fmt.Sprintf("postgres://%s:%s@%s:%s/budgit?sslmode=disable", config.DB.User, config.DB.Password, config.DB.Host, config.DB.Port)
 	conn, err := pgx.Connect(context.Background(), url)
 	if err != nil {
-		log.Panic("connecting to Postgres", zap.Error(err))
+		log.Panic("Connecting to Postgres", zap.Error(err))
 	}
 	defer conn.Close(context.Background())
 
-	starlingClient, err := clients.NewStarlingClient(config.Starling.URL, config.Starling.APIToken)
+	starlingClient, err := clients.NewStarlingClient(log, config.Starling.URL, config.Starling.APIToken)
 	if err != nil {
-		log.Panic("connecting to Starling", zap.Error(err))
+		log.Panic("Connecting to Starling", zap.Error(err))
 	}
 
-	service := svc.New(conn, db.DB{}, []svc.Integration{starlingClient})
+	db := db.New(log)
+	service := svc.New(log, conn, db, []svc.Integration{starlingClient})
 
 	accounts, err := service.LoadAccountsFromIntegration(context.Background(), starlingClient.ID())
 	if err != nil {
-		log.Panic("loading accounts from Starling", zap.Error(err))
+		log.Panic("Loading accounts from Starling", zap.Error(err))
 	}
 	fmt.Println(len(accounts), "accounts")
 	for _, account := range accounts {
 		fmt.Println(fmt.Sprintf("%+v", account))
 	}
+
+	log.Info("Exiting Budgit")
 }
 
 func newLogger(config *Config) (*zap.SugaredLogger, error) {

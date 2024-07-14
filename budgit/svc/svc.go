@@ -6,6 +6,7 @@ import (
 
 	"github.com/andrewthowell/budgit/budgit/db"
 	"github.com/jackc/pgx/v5"
+	"go.uber.org/zap"
 )
 
 type Conn interface {
@@ -25,13 +26,15 @@ type DB interface {
 }
 
 type Service struct {
+	log          *zap.SugaredLogger
 	conn         TxConn
 	db           DB
 	integrations map[string]Integration
 }
 
-func New(conn TxConn, db DB, integrations []Integration) *Service {
+func New(log *zap.SugaredLogger, conn TxConn, db DB, integrations []Integration) *Service {
 	return &Service{
+		log:          log,
 		conn:         conn,
 		db:           db,
 		integrations: mapByID(integrations),
