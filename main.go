@@ -11,6 +11,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 type Config struct {
@@ -41,37 +42,52 @@ func main() {
 		panic(err)
 	}
 
-	logger, err := zap.NewProduction()
-	if config.Logger.IsDev {
-		logger, err = zap.NewDevelopment()
-	}
+	log, err := newLogger(config)
 	if err != nil {
 		panic(err)
 	}
-	logger.Info("Starting Budgit")
+	defer log.Sync()
+
+	log.Info("Starting Budgit")
 
 	url := fmt.Sprintf("postgres://%s:%s@%s:%s?sslmode=disable", config.DB.User, config.DB.Password, config.DB.Host, config.DB.Port)
 	conn, err := pgx.Connect(context.Background(), url)
 	if err != nil {
-		panic(err)
+		log.Panic("connecting to Postgres", zap.Error(err))
 	}
 	defer conn.Close(context.Background())
 
 	starlingClient, err := clients.NewStarlingClient(config.Starling.URL, config.Starling.APIToken)
 	if err != nil {
-		panic(err)
+		log.Panic("connecting to Starling", zap.Error(err))
 	}
 
 	service := svc.New(conn, db.DB{}, []svc.Integration{starlingClient})
 
 	accounts, err := service.LoadAccountsFromIntegration(context.Background(), starlingClient.ID())
 	if err != nil {
-		panic(err)
+		log.Panic("loading accounts from Starling", zap.Error(err))
 	}
 	fmt.Println(len(accounts), "accounts")
 	for _, account := range accounts {
 		fmt.Println(fmt.Sprintf("%+v", account))
 	}
+}
+
+func newLogger(config *Config) (*zap.SugaredLogger, error) {
+	cfg, encoderCfg := zap.NewProductionConfig(), zap.NewProductionEncoderConfig()
+	if config.Logger.IsDev {
+		cfg, encoderCfg = zap.NewDevelopmentConfig(), zap.NewDevelopmentEncoderConfig()
+	}
+
+	encoderCfg.EncodeTime = zapcore.RFC3339NanoTimeEncoder
+	cfg.EncoderConfig = encoderCfg
+
+	l, err := cfg.Build()
+	if err != nil {
+		return nil, fmt.Errorf("starting logger: %w", err)
+	}
+	return l.Sugar(), nil
 }
 
 func loadConfigFromEnv() (*Config, error) {
