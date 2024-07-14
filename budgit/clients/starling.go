@@ -21,7 +21,7 @@ type Client struct {
 }
 
 func NewStarlingClient(log *zap.SugaredLogger, url, apiToken string) (*Client, error) {
-	log.Info("Starting Starling client", zap.String("url", url))
+	log.Debugw("Starting Starling client", zap.String("url", url))
 
 	client, err := starling.NewClientWithResponses(
 		url,
@@ -42,6 +42,8 @@ func NewStarlingClient(log *zap.SugaredLogger, url, apiToken string) (*Client, e
 func (c Client) ID() string { return starlingIntegrationID }
 
 func (c Client) GetExternalAccounts(ctx context.Context, syncTime time.Time) ([]*budgit.ExternalAccount, error) {
+	c.log.Debugw("Getting external Starling accounts", zap.Time("sync_time", syncTime))
+
 	resp, err := c.client.GetAccountsWithResponse(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("getting Accounts: %w", err)
@@ -49,9 +51,14 @@ func (c Client) GetExternalAccounts(ctx context.Context, syncTime time.Time) ([]
 	if resp.JSON4XX != nil {
 		return nil, fmt.Errorf("getting Accounts: %w", format4XXError(resp.JSON4XX))
 	}
+	c.log.Debugw("Retrieved external Starling accounts", zap.Int("number_of_accounts", len(*resp.JSON200.Accounts)))
 
 	accounts := make([]*budgit.ExternalAccount, 0, len(*resp.JSON200.Accounts))
 	for _, account := range *resp.JSON200.Accounts {
+		c.log.Debugw("Getting account balance of Starling account",
+			zap.String("account_id", account.AccountUid.String()),
+			zap.String("name", *account.Name),
+		)
 
 		resp, err := c.client.GetAccountBalanceWithResponse(ctx, *account.AccountUid)
 		if err != nil {
@@ -74,6 +81,11 @@ func (c Client) GetExternalAccounts(ctx context.Context, syncTime time.Time) ([]
 }
 
 func (c Client) GetExternalAccount(ctx context.Context, syncTime time.Time, externalID string) (*budgit.ExternalAccount, error) {
+	c.log.Debugw("Getting external Starling account",
+		zap.Time("sync_time", syncTime),
+		zap.String("account_id", externalID),
+	)
+
 	accounts, err := c.GetExternalAccounts(ctx, syncTime)
 	if err != nil {
 		return nil, fmt.Errorf("getting Account %q: %w", externalID, err)
