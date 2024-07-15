@@ -45,9 +45,9 @@ func (s *dbSuite) SetupSuite() {
 
 	pgContainer, err := postgres.Run(context.Background(), "postgres:16-alpine",
 		postgres.WithInitScripts(migrationFilePaths...),
-		postgres.WithDatabase("budgit"),
 		postgres.WithUsername("postgres"),
 		postgres.WithPassword("postgres"),
+		postgres.WithDatabase("budgit"),
 		testcontainers.WithWaitStrategy(
 			wait.ForLog("database system is ready to accept connections").
 				WithOccurrence(2).WithStartupTimeout(5*time.Second)),

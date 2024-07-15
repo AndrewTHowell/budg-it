@@ -2,6 +2,7 @@ package db_test
 
 import (
 	"context"
+	"time"
 
 	"github.com/andrewthowell/budgit/budgit/db"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -10,16 +11,25 @@ import (
 func (s *dbSuite) TestInsertPayees() {
 	ids, err := s.db.InsertPayees(context.Background(), s.conn, []*db.Payee{
 		{
-			ID:   pgtype.Text{String: "id-1", Valid: true},
-			Name: pgtype.Text{String: "name-1", Valid: true},
+			RequestID:          pgtype.Text{String: "request_id-1", Valid: true},
+			ValidFromTimestamp: pgtype.Timestamptz{Time: time.Unix(1, 0).UTC(), Valid: true},
+			ValidToTimestamp:   pgtype.Timestamptz{InfinityModifier: pgtype.Infinity, Valid: true},
+			ID:                 pgtype.Text{String: "id-1", Valid: true},
+			Name:               pgtype.Text{String: "name-1", Valid: true},
 		},
 		{
-			ID:   pgtype.Text{String: "id-2", Valid: true},
-			Name: pgtype.Text{String: "name-2", Valid: true},
+			RequestID:          pgtype.Text{String: "request_id-2", Valid: true},
+			ValidFromTimestamp: pgtype.Timestamptz{Time: time.Unix(2, 0).UTC(), Valid: true},
+			ValidToTimestamp:   pgtype.Timestamptz{InfinityModifier: pgtype.Infinity, Valid: true},
+			ID:                 pgtype.Text{String: "id-2", Valid: true},
+			Name:               pgtype.Text{String: "name-2", Valid: true},
 		},
 		{
-			ID:   pgtype.Text{String: "id-3", Valid: true},
-			Name: pgtype.Text{String: "name-3", Valid: true},
+			RequestID:          pgtype.Text{String: "request_id-3", Valid: true},
+			ValidFromTimestamp: pgtype.Timestamptz{Time: time.Unix(2, 0).UTC(), Valid: true},
+			ValidToTimestamp:   pgtype.Timestamptz{InfinityModifier: pgtype.Infinity, Valid: true},
+			ID:                 pgtype.Text{String: "id-3", Valid: true},
+			Name:               pgtype.Text{String: "name-3", Valid: true},
 		},
 	}...)
 	s.NoError(err)
@@ -29,16 +39,25 @@ func (s *dbSuite) TestInsertPayees() {
 func (s *dbSuite) TestSelectPayees() {
 	expectedPayees := []*db.Payee{
 		{
-			ID:   pgtype.Text{String: "id-1", Valid: true},
-			Name: pgtype.Text{String: "name-1", Valid: true},
+			RequestID:          pgtype.Text{String: "request_id-1", Valid: true},
+			ValidFromTimestamp: pgtype.Timestamptz{Time: time.Unix(1, 0).UTC(), Valid: true},
+			ValidToTimestamp:   pgtype.Timestamptz{InfinityModifier: pgtype.Infinity, Valid: true},
+			ID:                 pgtype.Text{String: "id-1", Valid: true},
+			Name:               pgtype.Text{String: "name-1", Valid: true},
 		},
 		{
-			ID:   pgtype.Text{String: "id-2", Valid: true},
-			Name: pgtype.Text{String: "name-2", Valid: true},
+			RequestID:          pgtype.Text{String: "request_id-2", Valid: true},
+			ValidFromTimestamp: pgtype.Timestamptz{Time: time.Unix(2, 0).UTC(), Valid: true},
+			ValidToTimestamp:   pgtype.Timestamptz{InfinityModifier: pgtype.Infinity, Valid: true},
+			ID:                 pgtype.Text{String: "id-2", Valid: true},
+			Name:               pgtype.Text{String: "name-2", Valid: true},
 		},
 		{
-			ID:   pgtype.Text{String: "id-3", Valid: true},
-			Name: pgtype.Text{String: "name-3", Valid: true},
+			RequestID:          pgtype.Text{String: "request_id-3", Valid: true},
+			ValidFromTimestamp: pgtype.Timestamptz{Time: time.Unix(3, 0).UTC(), Valid: true},
+			ValidToTimestamp:   pgtype.Timestamptz{InfinityModifier: pgtype.Infinity, Valid: true},
+			ID:                 pgtype.Text{String: "id-3", Valid: true},
+			Name:               pgtype.Text{String: "name-3", Valid: true},
 		},
 	}
 	_, err := s.db.InsertPayees(context.Background(), s.conn, expectedPayees...)
@@ -49,19 +68,64 @@ func (s *dbSuite) TestSelectPayees() {
 	s.CMPEqual(expectedPayees, actualPayees)
 }
 
+func (s *dbSuite) TestSelectPayeesByRequestID() {
+	payees := []*db.Payee{
+		{
+			RequestID:          pgtype.Text{String: "request_id-1", Valid: true},
+			ValidFromTimestamp: pgtype.Timestamptz{Time: time.Unix(1, 0).UTC(), Valid: true},
+			ValidToTimestamp:   pgtype.Timestamptz{InfinityModifier: pgtype.Infinity, Valid: true},
+			ID:                 pgtype.Text{String: "id-1", Valid: true},
+			Name:               pgtype.Text{String: "name-1", Valid: true},
+		},
+		{
+			RequestID:          pgtype.Text{String: "request_id-2", Valid: true},
+			ValidFromTimestamp: pgtype.Timestamptz{Time: time.Unix(2, 0).UTC(), Valid: true},
+			ValidToTimestamp:   pgtype.Timestamptz{InfinityModifier: pgtype.Infinity, Valid: true},
+			ID:                 pgtype.Text{String: "id-2", Valid: true},
+			Name:               pgtype.Text{String: "name-2", Valid: true},
+		},
+		{
+			RequestID:          pgtype.Text{String: "request_id-3", Valid: true},
+			ValidFromTimestamp: pgtype.Timestamptz{Time: time.Unix(3, 0).UTC(), Valid: true},
+			ValidToTimestamp:   pgtype.Timestamptz{InfinityModifier: pgtype.Infinity, Valid: true},
+			ID:                 pgtype.Text{String: "id-3", Valid: true},
+			Name:               pgtype.Text{String: "name-3", Valid: true},
+		},
+	}
+	_, err := s.db.InsertPayees(context.Background(), s.conn, payees...)
+	s.Require().NoError(err)
+
+	expectedPayees := map[string]*db.Payee{
+		"request_id-1": payees[0],
+		"request_id-3": payees[2],
+	}
+	actualPayees, err := s.db.SelectPayeesByRequestID(context.Background(), s.conn, "request_id-1", "request_id-3")
+	s.NoError(err)
+	s.CMPEqual(expectedPayees, actualPayees)
+}
+
 func (s *dbSuite) TestSelectPayeesByID() {
 	payees := []*db.Payee{
 		{
-			ID:   pgtype.Text{String: "id-1", Valid: true},
-			Name: pgtype.Text{String: "name-1", Valid: true},
+			RequestID:          pgtype.Text{String: "request_id-1", Valid: true},
+			ValidFromTimestamp: pgtype.Timestamptz{Time: time.Unix(1, 0).UTC(), Valid: true},
+			ValidToTimestamp:   pgtype.Timestamptz{InfinityModifier: pgtype.Infinity, Valid: true},
+			ID:                 pgtype.Text{String: "id-1", Valid: true},
+			Name:               pgtype.Text{String: "name-1", Valid: true},
 		},
 		{
-			ID:   pgtype.Text{String: "id-2", Valid: true},
-			Name: pgtype.Text{String: "name-2", Valid: true},
+			RequestID:          pgtype.Text{String: "request_id-2", Valid: true},
+			ValidFromTimestamp: pgtype.Timestamptz{Time: time.Unix(2, 0).UTC(), Valid: true},
+			ValidToTimestamp:   pgtype.Timestamptz{InfinityModifier: pgtype.Infinity, Valid: true},
+			ID:                 pgtype.Text{String: "id-2", Valid: true},
+			Name:               pgtype.Text{String: "name-2", Valid: true},
 		},
 		{
-			ID:   pgtype.Text{String: "id-3", Valid: true},
-			Name: pgtype.Text{String: "name-3", Valid: true},
+			RequestID:          pgtype.Text{String: "request_id-3", Valid: true},
+			ValidFromTimestamp: pgtype.Timestamptz{Time: time.Unix(3, 0).UTC(), Valid: true},
+			ValidToTimestamp:   pgtype.Timestamptz{InfinityModifier: pgtype.Infinity, Valid: true},
+			ID:                 pgtype.Text{String: "id-3", Valid: true},
+			Name:               pgtype.Text{String: "name-3", Valid: true},
 		},
 	}
 	_, err := s.db.InsertPayees(context.Background(), s.conn, payees...)
@@ -79,16 +143,25 @@ func (s *dbSuite) TestSelectPayeesByID() {
 func (s *dbSuite) TestSelectPayeesByName() {
 	payees := []*db.Payee{
 		{
-			ID:   pgtype.Text{String: "id-1", Valid: true},
-			Name: pgtype.Text{String: "name-1", Valid: true},
+			RequestID:          pgtype.Text{String: "request_id-1", Valid: true},
+			ValidFromTimestamp: pgtype.Timestamptz{Time: time.Unix(1, 0).UTC(), Valid: true},
+			ValidToTimestamp:   pgtype.Timestamptz{InfinityModifier: pgtype.Infinity, Valid: true},
+			ID:                 pgtype.Text{String: "id-1", Valid: true},
+			Name:               pgtype.Text{String: "name-1", Valid: true},
 		},
 		{
-			ID:   pgtype.Text{String: "id-2", Valid: true},
-			Name: pgtype.Text{String: "name-2", Valid: true},
+			RequestID:          pgtype.Text{String: "request_id-2", Valid: true},
+			ValidFromTimestamp: pgtype.Timestamptz{Time: time.Unix(2, 0).UTC(), Valid: true},
+			ValidToTimestamp:   pgtype.Timestamptz{InfinityModifier: pgtype.Infinity, Valid: true},
+			ID:                 pgtype.Text{String: "id-2", Valid: true},
+			Name:               pgtype.Text{String: "name-2", Valid: true},
 		},
 		{
-			ID:   pgtype.Text{String: "id-3", Valid: true},
-			Name: pgtype.Text{String: "name-3", Valid: true},
+			RequestID:          pgtype.Text{String: "request_id-3", Valid: true},
+			ValidFromTimestamp: pgtype.Timestamptz{Time: time.Unix(3, 0).UTC(), Valid: true},
+			ValidToTimestamp:   pgtype.Timestamptz{InfinityModifier: pgtype.Infinity, Valid: true},
+			ID:                 pgtype.Text{String: "id-3", Valid: true},
+			Name:               pgtype.Text{String: "name-3", Valid: true},
 		},
 	}
 	_, err := s.db.InsertPayees(context.Background(), s.conn, payees...)

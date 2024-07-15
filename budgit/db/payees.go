@@ -11,12 +11,19 @@ import (
 )
 
 type Payee struct {
-	ID   pgtype.Text `db:"id"`
-	Name pgtype.Text `db:"name"`
+	RequestID          pgtype.Text        `db:"request_id"`
+	ValidFromTimestamp pgtype.Timestamptz `db:"valid_from_timestamp"`
+	ValidToTimestamp   pgtype.Timestamptz `db:"valid_to_timestamp"`
+	ID                 pgtype.Text        `db:"id"`
+	Name               pgtype.Text        `db:"name"`
 }
 
 func (p Payee) GetID() string {
 	return p.ID.String
+}
+
+func (p Payee) GetRequestID() string {
+	return p.RequestID.String
 }
 
 func (p Payee) GetName() string {
@@ -37,7 +44,10 @@ func (db DB) InsertPayees(ctx context.Context, queryer Queryer, payees ...*Payee
 			SELECT %[1]s
 			FROM UNNEST(
 				$1::TEXT[],
-				$2::TEXT[]
+				$2::TIMESTAMPTZ[],
+				$3::TIMESTAMPTZ[],
+				$4::TEXT[],
+				$5::TEXT[]
 			)
 			AS u(%[1]s)
 		)
@@ -66,6 +76,7 @@ func (db DB) SelectPayees(ctx context.Context, queryer Queryer) ([]*Payee, error
 	sql := fmt.Sprintf(`
 		SELECT %[1]s
 		FROM payees
+		WHERE valid_to_timestamp = 'infinity'
 		ORDER BY id
 	`, payeeColumnsStr)
 
@@ -80,8 +91,38 @@ func (db DB) SelectPayees(ctx context.Context, queryer Queryer) ([]*Payee, error
 	if err != nil {
 		return nil, fmt.Errorf("selecting payees: %w", err)
 	}
-	db.log.Debugw("Selected payees scanned", zap.Int("numer_of_payees", len(payees)))
+	db.log.Debugw("Selected payees scanned", zap.Int("number_of_payees", len(payees)))
 	return structsToPointers(payees), nil
+}
+
+func (db DB) SelectPayeesByRequestID(ctx context.Context, queryer Queryer, requestIDs ...string) (map[string]*Payee, error) {
+	db.log.Debugw("Selecting payees by request ID", zap.String("request_ids", fmt.Sprintf("%+v", requestIDs)))
+
+	sql := fmt.Sprintf(`
+		SELECT %[1]s
+		FROM payees
+		WHERE valid_to_timestamp = 'infinity'
+		AND request_id = ANY($1::TEXT[])
+	`, payeeColumnsStr)
+
+	ids := make([]pgtype.Text, 0, len(requestIDs))
+	for _, id := range requestIDs {
+		ids = append(ids, pgtype.Text{String: id, Valid: true})
+	}
+
+	rows, err := queryer.Query(ctx, sql, ids)
+	if err != nil {
+		return nil, fmt.Errorf("selecting payees by request ID: %w", err)
+	}
+	defer rows.Close()
+	db.log.Debugw("Selected payees by request ID", zap.Int64("rows_affected", rows.CommandTag().RowsAffected()))
+
+	payees, err := pgx.CollectRows(rows, pgx.RowToStructByName[Payee])
+	if err != nil {
+		return nil, fmt.Errorf("selecting payees by request ID: %w", err)
+	}
+	db.log.Debugw("Selected payees by request ID scanned", zap.Int("number_of_payees", len(payees)))
+	return mapByRequestID(structsToPointers(payees)), nil
 }
 
 func (db DB) SelectPayeesByID(ctx context.Context, queryer Queryer, payeeIDs ...string) (map[string]*Payee, error) {
@@ -90,7 +131,8 @@ func (db DB) SelectPayeesByID(ctx context.Context, queryer Queryer, payeeIDs ...
 	sql := fmt.Sprintf(`
 		SELECT %[1]s
 		FROM payees
-		WHERE id = ANY($1::TEXT[])
+		WHERE valid_to_timestamp = 'infinity'
+		AND id = ANY($1::TEXT[])
 	`, payeeColumnsStr)
 
 	ids := make([]pgtype.Text, 0, len(payeeIDs))
@@ -109,7 +151,7 @@ func (db DB) SelectPayeesByID(ctx context.Context, queryer Queryer, payeeIDs ...
 	if err != nil {
 		return nil, fmt.Errorf("selecting payees by ID: %w", err)
 	}
-	db.log.Debugw("Selected payees by ID scanned", zap.Int("numer_of_payees", len(payees)))
+	db.log.Debugw("Selected payees by ID scanned", zap.Int("number_of_payees", len(payees)))
 	return mapByID(structsToPointers(payees)), nil
 }
 
@@ -119,7 +161,8 @@ func (db DB) SelectPayeesByName(ctx context.Context, queryer Queryer, payeeNames
 	sql := fmt.Sprintf(`
 		SELECT %[1]s
 		FROM payees
-		WHERE name = ANY($1::TEXT[])
+		WHERE valid_to_timestamp = 'infinity'
+		AND name = ANY($1::TEXT[])
 	`, payeeColumnsStr)
 
 	names := make([]pgtype.Text, 0, len(payeeNames))
@@ -138,18 +181,27 @@ func (db DB) SelectPayeesByName(ctx context.Context, queryer Queryer, payeeNames
 	if err != nil {
 		return nil, fmt.Errorf("selecting payees by name: %w", err)
 	}
-	db.log.Debugw("Selected payees by name scanned", zap.Int("numer_of_payees", len(payees)))
+	db.log.Debugw("Selected payees by name scanned", zap.Int("number_of_payees", len(payees)))
 	return mapByName(structsToPointers(payees)), nil
 }
 
 func payeesToArgs(payees []*Payee) []any {
+	requestIDs := make([]pgtype.Text, 0, len(payees))
+	validFromTimestamps := make([]pgtype.Timestamptz, 0, len(payees))
+	validToTimestamps := make([]pgtype.Timestamptz, 0, len(payees))
 	ids := make([]pgtype.Text, 0, len(payees))
 	names := make([]pgtype.Text, 0, len(payees))
 	for _, payee := range payees {
+		requestIDs = append(requestIDs, payee.RequestID)
+		validFromTimestamps = append(validFromTimestamps, payee.ValidFromTimestamp)
+		validToTimestamps = append(validToTimestamps, payee.ValidToTimestamp)
 		ids = append(ids, payee.ID)
 		names = append(names, payee.Name)
 	}
 	return []any{
+		requestIDs,
+		validFromTimestamps,
+		validToTimestamps,
 		ids,
 		names,
 	}

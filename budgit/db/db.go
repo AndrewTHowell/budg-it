@@ -58,6 +58,18 @@ func getAllDBColumns(strct any) []string {
 	return columns
 }
 
+type requestIDGetter interface {
+	GetRequestID() string
+}
+
+func mapByRequestID[E requestIDGetter](elems []E) map[string]E {
+	elemsByRequestID := make(map[string]E, len(elems))
+	for _, elem := range elems {
+		elemsByRequestID[elem.GetRequestID()] = elem
+	}
+	return elemsByRequestID
+}
+
 type idGetter interface {
 	GetID() string
 }
