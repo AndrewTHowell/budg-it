@@ -7,6 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
 	"go.uber.org/zap"
 )
 
@@ -25,6 +26,11 @@ type Queryer interface {
 
 type Execer interface {
 	Exec(ctx context.Context, sql string, arguments ...any) (pgconn.CommandTag, error)
+}
+
+type ValidToTimestampUpdate struct {
+	ID               pgtype.Text        `db:"id"`
+	ValidToTimestamp pgtype.Timestamptz `db:"valid_to_timestamp"`
 }
 
 func rowsToIDs(rows pgx.Rows) ([]string, error) {

@@ -83,6 +83,48 @@ func (db DB) InsertAccounts(ctx context.Context, queryer Queryer, accounts ...*A
 	return ids, nil
 }
 
+func (db DB) UpdateAccountValidToTimestamps(ctx context.Context, queryer Queryer, updates ...ValidToTimestampUpdate) ([]string, error) {
+	db.log.Debugw("Updating account valid to timestamps", zap.Int("number_of_accounts", len(updates)))
+
+	sql := `
+		UPDATE accounts
+		SET valid_to_timestamp = input.valid_to_timestamp
+		FROM 
+		(
+			SELECT id, valid_to_timestamp
+			FROM UNNEST(
+				$1::TEXT[],
+				$2::TIMESTAMPTZ[]
+			)
+			AS u(id, valid_to_timestamp)
+		) AS input
+		WHERE accounts.valid_to_timestamp = 'infinity'
+		AND accounts.id = input.id
+		RETURNING accounts.id;
+	`
+
+	accountIDs := make([]pgtype.Text, 0, len(updates))
+	validToTimestamps := make([]pgtype.Timestamptz, 0, len(updates))
+	for _, update := range updates {
+		accountIDs = append(accountIDs, update.ID)
+		validToTimestamps = append(validToTimestamps, update.ValidToTimestamp)
+	}
+
+	rows, err := queryer.Query(ctx, sql, accountIDs, validToTimestamps)
+	if err != nil {
+		return nil, fmt.Errorf("updating %d account valid to timestamps: %w", len(updates), err)
+	}
+	defer rows.Close()
+	db.log.Debugw("Updated account valid to timestamps", zap.Int64("rows_affected", rows.CommandTag().RowsAffected()))
+
+	ids, err := rowsToIDs(rows)
+	if err != nil {
+		return nil, fmt.Errorf("updating %d account valid to timestamps: %w", len(updates), err)
+	}
+	db.log.Debugw("Updated account valid to timestamps scanned", zap.String("updated_ids", fmt.Sprintf("%v", ids)))
+	return ids, nil
+}
+
 func (db DB) SelectAccounts(ctx context.Context, queryer Queryer) ([]*Account, error) {
 	db.log.Debug("Selecting accounts")
 
