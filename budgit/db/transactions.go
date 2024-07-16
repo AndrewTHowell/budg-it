@@ -137,8 +137,7 @@ func (db DB) SelectTransactionsByRequestID(ctx context.Context, queryer Queryer,
 	sql := fmt.Sprintf(`
 		SELECT %[1]s
 		FROM transactions
-		WHERE valid_to_timestamp = 'infinity'
-		AND request_id = ANY($1::TEXT[])
+		WHERE request_id = ANY($1::TEXT[])
 	`, transactionColumnsStr)
 
 	ids := make([]pgtype.Text, 0, len(requestIDs))

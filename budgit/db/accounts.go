@@ -114,8 +114,7 @@ func (db DB) SelectAccountsByRequestID(ctx context.Context, queryer Queryer, req
 	sql := fmt.Sprintf(`
 		SELECT %[1]s
 		FROM accounts
-		WHERE valid_to_timestamp = 'infinity'
-		AND request_id = ANY($1::TEXT[])
+		WHERE request_id = ANY($1::TEXT[])
 	`, accountColumnsStr)
 
 	ids := make([]pgtype.Text, 0, len(requestIDs))

@@ -101,8 +101,7 @@ func (db DB) SelectPayeesByRequestID(ctx context.Context, queryer Queryer, reque
 	sql := fmt.Sprintf(`
 		SELECT %[1]s
 		FROM payees
-		WHERE valid_to_timestamp = 'infinity'
-		AND request_id = ANY($1::TEXT[])
+		WHERE request_id = ANY($1::TEXT[])
 	`, payeeColumnsStr)
 
 	ids := make([]pgtype.Text, 0, len(requestIDs))
