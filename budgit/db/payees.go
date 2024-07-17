@@ -70,6 +70,48 @@ func (db DB) InsertPayees(ctx context.Context, queryer Queryer, payees ...*Payee
 	return ids, nil
 }
 
+func (db DB) UpdatePayeeValidToTimestamps(ctx context.Context, queryer Queryer, updates ...ValidToTimestampUpdate) ([]string, error) {
+	db.log.Debugw("Updating payee valid to timestamps", zap.Int("number_of_payees", len(updates)))
+
+	sql := `
+		UPDATE payees
+		SET valid_to_timestamp = input.valid_to_timestamp
+		FROM 
+		(
+			SELECT id, valid_to_timestamp
+			FROM UNNEST(
+				$1::TEXT[],
+				$2::TIMESTAMPTZ[]
+			)
+			AS u(id, valid_to_timestamp)
+		) AS input
+		WHERE payees.valid_to_timestamp = 'infinity'
+		AND payees.id = input.id
+		RETURNING payees.id;
+	`
+
+	payeeIDs := make([]pgtype.Text, 0, len(updates))
+	validToTimestamps := make([]pgtype.Timestamptz, 0, len(updates))
+	for _, update := range updates {
+		payeeIDs = append(payeeIDs, update.ID)
+		validToTimestamps = append(validToTimestamps, update.ValidToTimestamp)
+	}
+
+	rows, err := queryer.Query(ctx, sql, payeeIDs, validToTimestamps)
+	if err != nil {
+		return nil, fmt.Errorf("updating %d payee valid to timestamps: %w", len(updates), err)
+	}
+	defer rows.Close()
+	db.log.Debugw("Updated payee valid to timestamps", zap.Int64("rows_affected", rows.CommandTag().RowsAffected()))
+
+	ids, err := rowsToIDs(rows)
+	if err != nil {
+		return nil, fmt.Errorf("updating %d payee valid to timestamps: %w", len(updates), err)
+	}
+	db.log.Debugw("Updated payee valid to timestamps scanned", zap.String("updated_ids", fmt.Sprintf("%v", ids)))
+	return ids, nil
+}
+
 func (db DB) SelectPayees(ctx context.Context, queryer Queryer) ([]*Payee, error) {
 	db.log.Debug("Selecting payees")
 
