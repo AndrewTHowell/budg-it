@@ -51,6 +51,104 @@ func (s *dbSuite) TestInsertTransactions() {
 	s.ElementsMatch([]string{"id-1", "id-2", "id-3"}, ids)
 }
 
+func (s *dbSuite) TestUpdateTransactionValidToTimestamps() {
+	_, err := s.db.InsertTransactions(context.Background(), s.conn, []*db.Transaction{
+		{
+			RequestID:          pgtype.Text{String: "request_id-1", Valid: true},
+			ValidFromTimestamp: pgtype.Timestamptz{Time: time.Unix(1, 0).UTC(), Valid: true},
+			ValidToTimestamp:   pgtype.Timestamptz{InfinityModifier: pgtype.Infinity, Valid: true},
+			ID:                 pgtype.Text{String: "id-1", Valid: true},
+			EffectiveDate:      pgtype.Date{Time: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC), Valid: true},
+			AccountID:          pgtype.Text{String: "account-id-1", Valid: true},
+			PayeeID:            pgtype.Text{String: "payee-id-1", Valid: true},
+			IsPayeeInternal:    pgtype.Bool{Bool: true, Valid: true},
+			Amount:             pgtype.Int8{Int64: 1, Valid: true},
+			Cleared:            pgtype.Bool{Bool: true, Valid: true},
+		},
+		{
+			RequestID:          pgtype.Text{String: "request_id-2", Valid: true},
+			ValidFromTimestamp: pgtype.Timestamptz{Time: time.Unix(3, 0).UTC(), Valid: true},
+			ValidToTimestamp:   pgtype.Timestamptz{InfinityModifier: pgtype.Infinity, Valid: true},
+			ID:                 pgtype.Text{String: "id-2", Valid: true},
+			EffectiveDate:      pgtype.Date{Time: time.Date(2000, 1, 2, 0, 0, 0, 0, time.UTC), Valid: true},
+			AccountID:          pgtype.Text{String: "account-id-2", Valid: true},
+			PayeeID:            pgtype.Text{String: "payee-id-2", Valid: true},
+			IsPayeeInternal:    pgtype.Bool{Bool: true, Valid: true},
+			Amount:             pgtype.Int8{Int64: 2, Valid: true},
+			Cleared:            pgtype.Bool{Bool: true, Valid: true},
+		},
+		{
+			RequestID:          pgtype.Text{String: "request_id-3", Valid: true},
+			ValidFromTimestamp: pgtype.Timestamptz{Time: time.Unix(5, 0).UTC(), Valid: true},
+			ValidToTimestamp:   pgtype.Timestamptz{InfinityModifier: pgtype.Infinity, Valid: true},
+			ID:                 pgtype.Text{String: "id-3", Valid: true},
+			EffectiveDate:      pgtype.Date{Time: time.Date(2000, 1, 3, 0, 0, 0, 0, time.UTC), Valid: true},
+			AccountID:          pgtype.Text{String: "account-id-3", Valid: true},
+			PayeeID:            pgtype.Text{String: "payee-id-3", Valid: true},
+			IsPayeeInternal:    pgtype.Bool{Bool: true, Valid: true},
+			Amount:             pgtype.Int8{Int64: 3, Valid: true},
+			Cleared:            pgtype.Bool{Bool: true, Valid: true},
+		},
+	}...)
+	s.Require().NoError(err)
+
+	ids, err := s.db.UpdateTransactionValidToTimestamps(context.Background(), s.conn, []db.ValidToTimestampUpdate{
+		{
+			ID:               pgtype.Text{String: "id-1", Valid: true},
+			ValidToTimestamp: pgtype.Timestamptz{Time: time.Unix(10, 0).UTC(), Valid: true},
+		},
+		{
+			ID:               pgtype.Text{String: "id-3", Valid: true},
+			ValidToTimestamp: pgtype.Timestamptz{Time: time.Unix(13, 0).UTC(), Valid: true},
+		},
+	}...)
+	s.NoError(err)
+	s.ElementsMatch([]string{"id-1", "id-3"}, ids)
+
+	s.Run("TransactionsUpdatedInDB", func() {
+		actualTransactions, err := s.db.SelectTransactionsByRequestID(context.Background(), s.conn, "request_id-1", "request_id-2", "request_id-3")
+		s.NoError(err)
+		s.CMPEqual(map[string]*db.Transaction{
+			"request_id-1": {
+				RequestID:          pgtype.Text{String: "request_id-1", Valid: true},
+				ValidFromTimestamp: pgtype.Timestamptz{Time: time.Unix(1, 0).UTC(), Valid: true},
+				ValidToTimestamp:   pgtype.Timestamptz{Time: time.Unix(10, 0).UTC(), Valid: true},
+				ID:                 pgtype.Text{String: "id-1", Valid: true},
+				EffectiveDate:      pgtype.Date{Time: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC), Valid: true},
+				AccountID:          pgtype.Text{String: "account-id-1", Valid: true},
+				PayeeID:            pgtype.Text{String: "payee-id-1", Valid: true},
+				IsPayeeInternal:    pgtype.Bool{Bool: true, Valid: true},
+				Amount:             pgtype.Int8{Int64: 1, Valid: true},
+				Cleared:            pgtype.Bool{Bool: true, Valid: true},
+			},
+			"request_id-2": {
+				RequestID:          pgtype.Text{String: "request_id-2", Valid: true},
+				ValidFromTimestamp: pgtype.Timestamptz{Time: time.Unix(3, 0).UTC(), Valid: true},
+				ValidToTimestamp:   pgtype.Timestamptz{InfinityModifier: pgtype.Infinity, Valid: true},
+				ID:                 pgtype.Text{String: "id-2", Valid: true},
+				EffectiveDate:      pgtype.Date{Time: time.Date(2000, 1, 2, 0, 0, 0, 0, time.UTC), Valid: true},
+				AccountID:          pgtype.Text{String: "account-id-2", Valid: true},
+				PayeeID:            pgtype.Text{String: "payee-id-2", Valid: true},
+				IsPayeeInternal:    pgtype.Bool{Bool: true, Valid: true},
+				Amount:             pgtype.Int8{Int64: 2, Valid: true},
+				Cleared:            pgtype.Bool{Bool: true, Valid: true},
+			},
+			"request_id-3": {
+				RequestID:          pgtype.Text{String: "request_id-3", Valid: true},
+				ValidFromTimestamp: pgtype.Timestamptz{Time: time.Unix(5, 0).UTC(), Valid: true},
+				ValidToTimestamp:   pgtype.Timestamptz{Time: time.Unix(13, 0).UTC(), Valid: true},
+				ID:                 pgtype.Text{String: "id-3", Valid: true},
+				EffectiveDate:      pgtype.Date{Time: time.Date(2000, 1, 3, 0, 0, 0, 0, time.UTC), Valid: true},
+				AccountID:          pgtype.Text{String: "account-id-3", Valid: true},
+				PayeeID:            pgtype.Text{String: "payee-id-3", Valid: true},
+				IsPayeeInternal:    pgtype.Bool{Bool: true, Valid: true},
+				Amount:             pgtype.Int8{Int64: 3, Valid: true},
+				Cleared:            pgtype.Bool{Bool: true, Valid: true},
+			},
+		}, actualTransactions)
+	})
+}
+
 func (s *dbSuite) TestSelectTransactions() {
 	expectedTransactions := []*db.Transaction{
 		{

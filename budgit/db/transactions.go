@@ -80,6 +80,48 @@ func (db DB) InsertTransactions(ctx context.Context, queryer Queryer, transactio
 	return ids, nil
 }
 
+func (db DB) UpdateTransactionValidToTimestamps(ctx context.Context, queryer Queryer, updates ...ValidToTimestampUpdate) ([]string, error) {
+	db.log.Debugw("Updating transaction valid to timestamps", zap.Int("number_of_transactions", len(updates)))
+
+	sql := `
+		UPDATE transactions
+		SET valid_to_timestamp = input.valid_to_timestamp
+		FROM 
+		(
+			SELECT id, valid_to_timestamp
+			FROM UNNEST(
+				$1::TEXT[],
+				$2::TIMESTAMPTZ[]
+			)
+			AS u(id, valid_to_timestamp)
+		) AS input
+		WHERE transactions.valid_to_timestamp = 'infinity'
+		AND transactions.id = input.id
+		RETURNING transactions.id;
+	`
+
+	transactionIDs := make([]pgtype.Text, 0, len(updates))
+	validToTimestamps := make([]pgtype.Timestamptz, 0, len(updates))
+	for _, update := range updates {
+		transactionIDs = append(transactionIDs, update.ID)
+		validToTimestamps = append(validToTimestamps, update.ValidToTimestamp)
+	}
+
+	rows, err := queryer.Query(ctx, sql, transactionIDs, validToTimestamps)
+	if err != nil {
+		return nil, fmt.Errorf("updating %d transaction valid to timestamps: %w", len(updates), err)
+	}
+	defer rows.Close()
+	db.log.Debugw("Updated transaction valid to timestamps", zap.Int64("rows_affected", rows.CommandTag().RowsAffected()))
+
+	ids, err := rowsToIDs(rows)
+	if err != nil {
+		return nil, fmt.Errorf("updating %d transaction valid to timestamps: %w", len(updates), err)
+	}
+	db.log.Debugw("Updated transaction valid to timestamps scanned", zap.String("updated_ids", fmt.Sprintf("%v", ids)))
+	return ids, nil
+}
+
 func (db DB) SelectTransactions(ctx context.Context, queryer Queryer) ([]*Transaction, error) {
 	db.log.Debug("Selecting transactions")
 
