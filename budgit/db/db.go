@@ -11,6 +11,15 @@ import (
 	"go.uber.org/zap"
 )
 
+type Queryer interface {
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+}
+
+type Execer interface {
+	Exec(ctx context.Context, sql string, arguments ...any) (pgconn.CommandTag, error)
+}
+
 type DB struct {
 	log *zap.SugaredLogger
 }
@@ -19,13 +28,17 @@ func New(log *zap.SugaredLogger) DB {
 	return DB{log: log}
 }
 
-type Queryer interface {
-	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
-	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
-}
+func (db DB) Now(ctx context.Context, queryer Queryer) (pgtype.Timestamptz, error) {
+	db.log.Debug("Selecting Now timestamp")
 
-type Execer interface {
-	Exec(ctx context.Context, sql string, arguments ...any) (pgconn.CommandTag, error)
+	row := queryer.QueryRow(ctx, `SELECT NOW()`)
+	var now pgtype.Timestamptz
+	if err := row.Scan(&now); err != nil {
+		return pgtype.Timestamptz{}, fmt.Errorf("selecting Now: %w", err)
+	}
+	db.log.Debug("Selected Now")
+
+	return now, nil
 }
 
 type ValidToTimestampUpdate struct {

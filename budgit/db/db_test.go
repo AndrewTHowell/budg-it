@@ -73,6 +73,16 @@ func (s *dbSuite) TearDownSuite() {
 	s.Require().NoError(s.pgContainer.Terminate(context.Background()), "unexpected error terminating postgres container")
 }
 
+func (s *dbSuite) TestNow() {
+	startTime := time.Now().UTC()
+	now, err := s.db.Now(context.Background(), s.conn)
+	s.Require().NoError(err)
+	endTime := time.Now().UTC()
+
+	s.True(startTime.Before(now.Time), "expected start time to be before Now")
+	s.True(endTime.After(now.Time), "expected end time to be after Now")
+}
+
 func (s *dbSuite) truncateTables(tables ...string) {
 	_, err := s.conn.Exec(context.Background(), fmt.Sprintf(`TRUNCATE TABLE %s`, strings.Join(tables, ", ")))
 	s.Require().NoError(err, "unexpected error truncating tables %+v", tables)
