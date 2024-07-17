@@ -11,6 +11,7 @@ import (
 	"github.com/andrewthowell/budgit/budgit/db/dbconvert"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"golang.org/x/exp/maps"
 )
 
@@ -30,8 +31,19 @@ func (s Service) CreateTransactions(ctx context.Context, transactions ...*budgit
 			return err
 		}
 
+		now, err := s.db.Now(ctx, conn)
+		if err != nil {
+			return err
+		}
+
+		dbTransactions := dbconvert.FromTransactions(transactions...)
+		for _, dbTransaction := range dbTransactions {
+			dbTransaction.ValidFromTimestamp = now
+			dbTransaction.ValidToTimestamp = pgtype.Timestamptz{InfinityModifier: pgtype.Infinity, Valid: true}
+		}
+
 		// TODO: check for transactions not being inserted
-		if _, err := s.db.InsertTransactions(ctx, conn, dbconvert.FromTransactions(transactions...)...); err != nil {
+		if _, err := s.db.InsertTransactions(ctx, conn, dbTransactions...); err != nil {
 			return err
 		}
 

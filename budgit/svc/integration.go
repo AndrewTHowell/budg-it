@@ -6,18 +6,20 @@ import (
 	"time"
 
 	"github.com/andrewthowell/budgit/budgit"
+	"github.com/andrewthowell/budgit/budgit/db"
 	"github.com/andrewthowell/budgit/budgit/db/dbconvert"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
 
 type Integration interface {
 	ID() string
-	GetExternalAccounts(ctx context.Context, syncTime time.Time) ([]*budgit.ExternalAccount, error)
-	GetExternalAccount(ctx context.Context, syncTime time.Time, externalID string) (*budgit.ExternalAccount, error)
+	GetExternalAccounts(ctx context.Context) ([]*budgit.ExternalAccount, error)
+	GetExternalAccount(ctx context.Context, externalID string) (*budgit.ExternalAccount, error)
 }
 
 func (s Service) LoadAccountsFromIntegration(ctx context.Context, integrationID string) ([]*budgit.Account, error) {
-	externalAccounts, err := s.integrations[integrationID].GetExternalAccounts(ctx, time.Now().UTC())
+	externalAccounts, err := s.integrations[integrationID].GetExternalAccounts(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("loading accounts from %q: %w", integrationID, err)
 	}
@@ -32,8 +34,7 @@ func (s Service) LoadAccountsFromIntegration(ctx context.Context, integrationID 
 		})
 	}
 
-	// TODO: check for accounts not being inserted
-	if _, err := s.db.InsertAccounts(ctx, s.conn, dbconvert.FromAccounts(accounts...)...); err != nil {
+	if _, err := s.CreateAccounts(ctx, accounts...); err != nil {
 		return nil, fmt.Errorf("loading accounts from %q: %w", integrationID, err)
 	}
 	return accounts, nil
@@ -54,13 +55,27 @@ var (
 )
 
 func (s Service) SyncAccount(ctx context.Context, accountID string) error {
-	dbAccounts, err := s.db.SelectAccountsByID(ctx, s.conn, accountID)
+	var now time.Time
+	var dbAccount *db.Account
+	err := s.inTx(ctx, func(conn Conn) error {
+		dbNow, err := s.db.Now(ctx, conn)
+		if err != nil {
+			return err
+		}
+		now = dbNow.Time
+
+		dbAccounts, err := s.db.SelectAccountsByID(ctx, s.conn, accountID)
+		if err != nil {
+			return fmt.Errorf("syncing account %q: %w", accountID, err)
+		}
+		var ok bool
+		if dbAccount, ok = dbAccounts[accountID]; !ok {
+			return fmt.Errorf("syncing account %q: %w", accountID, ErrAccountNotFound)
+		}
+		return nil
+	}, pgx.TxOptions{AccessMode: pgx.ReadWrite})
 	if err != nil {
-		return fmt.Errorf("syncing account %q: %w", accountID, err)
-	}
-	dbAccount, ok := dbAccounts[accountID]
-	if !ok {
-		return fmt.Errorf("syncing account %q: %w", accountID, ErrAccountNotFound)
+		return fmt.Errorf("creating accounts: %w", err)
 	}
 	account := dbconvert.ToAccounts(dbAccount)[0]
 
@@ -69,7 +84,7 @@ func (s Service) SyncAccount(ctx context.Context, accountID string) error {
 		return ErrAccountNotLinked
 	}
 
-	externalAccount, err := s.integrations[account.ExternalAccount.IntegrationID].GetExternalAccount(ctx, time.Now().UTC(), account.ExternalAccount.ID)
+	externalAccount, err := s.integrations[account.ExternalAccount.IntegrationID].GetExternalAccount(ctx, account.ExternalAccount.ID)
 	if err != nil {
 		return fmt.Errorf("syncing account %q: %w", accountID, err)
 	}
@@ -80,7 +95,6 @@ func (s Service) SyncAccount(ctx context.Context, accountID string) error {
 			InternalBalance: account.Balance,
 		}
 	}
-	account.ExternalAccount.LastSyncTimestamp = time.Now().UTC()
 	account.ExternalAccount = externalAccount
 
 	// TODO: check for accounts not being inserted

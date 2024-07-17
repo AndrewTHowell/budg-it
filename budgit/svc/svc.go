@@ -6,6 +6,7 @@ import (
 
 	"github.com/andrewthowell/budgit/budgit/db"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"go.uber.org/zap"
 )
 
@@ -20,6 +21,7 @@ type TxConn interface {
 }
 
 type DB interface {
+	Now(ctx context.Context, queryer db.Queryer) (pgtype.Timestamptz, error)
 	AccountDB
 	PayeeDB
 	TransactionDB

@@ -9,6 +9,7 @@ import (
 	"github.com/andrewthowell/budgit/budgit/db"
 	"github.com/andrewthowell/budgit/budgit/db/dbconvert"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"golang.org/x/exp/maps"
 )
 
@@ -25,8 +26,19 @@ func (s Service) CreatePayees(ctx context.Context, payees ...*budgit.Payee) ([]*
 			return err
 		}
 
+		now, err := s.db.Now(ctx, conn)
+		if err != nil {
+			return err
+		}
+
+		dbPayees := dbconvert.FromPayees(payees...)
+		for _, dbPayee := range dbPayees {
+			dbPayee.ValidFromTimestamp = now
+			dbPayee.ValidToTimestamp = pgtype.Timestamptz{InfinityModifier: pgtype.Infinity, Valid: true}
+		}
+
 		// TODO: check for payees not being inserted
-		if _, err := s.db.InsertPayees(ctx, conn, dbconvert.FromPayees(payees...)...); err != nil {
+		if _, err := s.db.InsertPayees(ctx, conn, dbPayees...); err != nil {
 			return err
 		}
 		createdPayees = payees

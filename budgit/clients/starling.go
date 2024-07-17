@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"slices"
-	"time"
 
 	"github.com/andrewthowell/budgit/budgit"
 	"github.com/andrewthowell/budgit/integrations/starling"
@@ -41,8 +40,8 @@ func NewStarlingClient(log *zap.SugaredLogger, url, apiToken string) (*Client, e
 
 func (c Client) ID() string { return starlingIntegrationID }
 
-func (c Client) GetExternalAccounts(ctx context.Context, syncTime time.Time) ([]*budgit.ExternalAccount, error) {
-	c.log.Debugw("Getting external Starling accounts", zap.Time("sync_time", syncTime))
+func (c Client) GetExternalAccounts(ctx context.Context) ([]*budgit.ExternalAccount, error) {
+	c.log.Debug("Getting external Starling accounts")
 
 	resp, err := c.client.GetAccountsWithResponse(ctx)
 	if err != nil {
@@ -68,9 +67,8 @@ func (c Client) GetExternalAccounts(ctx context.Context, syncTime time.Time) ([]
 			return nil, fmt.Errorf("getting Accounts: %w", format4XXError(resp.JSON4XX))
 		}
 		accounts = append(accounts, &budgit.ExternalAccount{
-			ID:                account.AccountUid.String(),
-			IntegrationID:     starlingIntegrationID,
-			LastSyncTimestamp: syncTime,
+			ID:            account.AccountUid.String(),
+			IntegrationID: starlingIntegrationID,
 			Balance: budgit.Balance{
 				ClearedBalance:   budgit.BalanceAmount(resp.JSON200.TotalClearedBalance.MinorUnits),
 				EffectiveBalance: budgit.BalanceAmount(resp.JSON200.TotalEffectiveBalance.MinorUnits),
@@ -80,13 +78,10 @@ func (c Client) GetExternalAccounts(ctx context.Context, syncTime time.Time) ([]
 	return accounts, nil
 }
 
-func (c Client) GetExternalAccount(ctx context.Context, syncTime time.Time, externalID string) (*budgit.ExternalAccount, error) {
-	c.log.Debugw("Getting external Starling account",
-		zap.Time("sync_time", syncTime),
-		zap.String("account_id", externalID),
-	)
+func (c Client) GetExternalAccount(ctx context.Context, externalID string) (*budgit.ExternalAccount, error) {
+	c.log.Debugw("Getting external Starling account", zap.String("account_id", externalID))
 
-	accounts, err := c.GetExternalAccounts(ctx, syncTime)
+	accounts, err := c.GetExternalAccounts(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("getting Account %q: %w", externalID, err)
 	}
