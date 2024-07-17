@@ -3,13 +3,13 @@ package svc
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/andrewthowell/budgit/budgit"
 	"github.com/andrewthowell/budgit/budgit/db"
 	"github.com/andrewthowell/budgit/budgit/db/dbconvert"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Integration interface {
@@ -34,10 +34,31 @@ func (s Service) LoadAccountsFromIntegration(ctx context.Context, integrationID 
 		})
 	}
 
-	if _, err := s.CreateAccounts(ctx, accounts...); err != nil {
-		return nil, fmt.Errorf("loading accounts from %q: %w", integrationID, err)
+	var createdAccounts []*budgit.Account
+	err = s.inTx(ctx, func(conn Conn) error {
+		now, err := s.db.Now(ctx, conn)
+		if err != nil {
+			return err
+		}
+
+		dbAccounts := dbconvert.FromAccounts(accounts...)
+		for _, dbAccount := range dbAccounts {
+			dbAccount.ValidFromTimestamp = now
+			dbAccount.ValidToTimestamp = pgtype.Timestamptz{InfinityModifier: pgtype.Infinity, Valid: true}
+			dbAccount.ExternalLastSyncTimestamp = now
+		}
+
+		// TODO: check for accounts not being inserted
+		if _, err := s.db.InsertAccounts(ctx, conn, dbAccounts...); err != nil {
+			return err
+		}
+		createdAccounts = accounts
+		return nil
+	}, pgx.TxOptions{AccessMode: pgx.ReadWrite})
+	if err != nil {
+		return nil, fmt.Errorf("creating accounts: %w", err)
 	}
-	return accounts, nil
+	return createdAccounts, nil
 }
 
 type AccountSyncError struct {
@@ -55,27 +76,13 @@ var (
 )
 
 func (s Service) SyncAccount(ctx context.Context, accountID string) error {
-	var now time.Time
-	var dbAccount *db.Account
-	err := s.inTx(ctx, func(conn Conn) error {
-		dbNow, err := s.db.Now(ctx, conn)
-		if err != nil {
-			return err
-		}
-		now = dbNow.Time
-
-		dbAccounts, err := s.db.SelectAccountsByID(ctx, s.conn, accountID)
-		if err != nil {
-			return fmt.Errorf("syncing account %q: %w", accountID, err)
-		}
-		var ok bool
-		if dbAccount, ok = dbAccounts[accountID]; !ok {
-			return fmt.Errorf("syncing account %q: %w", accountID, ErrAccountNotFound)
-		}
-		return nil
-	}, pgx.TxOptions{AccessMode: pgx.ReadWrite})
+	dbAccounts, err := s.db.SelectAccountsByID(ctx, s.conn, accountID)
 	if err != nil {
-		return fmt.Errorf("creating accounts: %w", err)
+		return fmt.Errorf("syncing account %q: %w", accountID, err)
+	}
+	dbAccount, ok := dbAccounts[accountID]
+	if !ok {
+		return fmt.Errorf("syncing account %q: %w", accountID, ErrAccountNotFound)
 	}
 	account := dbconvert.ToAccounts(dbAccount)[0]
 
@@ -97,8 +104,31 @@ func (s Service) SyncAccount(ctx context.Context, accountID string) error {
 	}
 	account.ExternalAccount = externalAccount
 
-	// TODO: check for accounts not being inserted
-	if _, err := s.db.InsertAccounts(ctx, s.conn, dbconvert.FromAccounts(account)...); err != nil {
+	err = s.inTx(ctx, func(conn Conn) error {
+		now, err := s.db.Now(ctx, conn)
+		if err != nil {
+			return err
+		}
+
+		if _, err := s.db.UpdateAccountValidToTimestamps(ctx, s.conn, db.ValidToTimestampUpdate{
+			ID:               dbAccount.ID,
+			ValidToTimestamp: now,
+		}); err != nil {
+			return fmt.Errorf("syncing account %q: %w", accountID, err)
+		}
+
+		dbAccount := dbconvert.FromAccounts(account)[0]
+		dbAccount.ValidFromTimestamp = now
+		dbAccount.ValidToTimestamp = pgtype.Timestamptz{InfinityModifier: pgtype.Infinity, Valid: true}
+		dbAccount.ExternalLastSyncTimestamp = now
+
+		// TODO: check for accounts not being inserted
+		if _, err := s.db.InsertAccounts(ctx, s.conn, dbAccount); err != nil {
+			return fmt.Errorf("syncing account %q: %w", accountID, err)
+		}
+		return nil
+	}, pgx.TxOptions{AccessMode: pgx.ReadWrite})
+	if err != nil {
 		return fmt.Errorf("syncing account %q: %w", accountID, err)
 	}
 	return nil

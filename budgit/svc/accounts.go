@@ -13,12 +13,12 @@ import (
 
 type AccountDB interface {
 	InsertAccounts(ctx context.Context, queryer db.Queryer, account ...*db.Account) ([]string, error)
+	UpdateAccountValidToTimestamps(ctx context.Context, queryer db.Queryer, updates ...db.ValidToTimestampUpdate) ([]string, error)
 	SelectAccounts(ctx context.Context, queryer db.Queryer) ([]*db.Account, error)
 	SelectAccountsByID(ctx context.Context, queryer db.Queryer, accountIDs ...string) (map[string]*db.Account, error)
 }
 
 func (s Service) CreateAccounts(ctx context.Context, accounts ...*budgit.Account) ([]*budgit.Account, error) {
-
 	var createdAccounts []*budgit.Account
 	err := s.inTx(ctx, func(conn Conn) error {
 		now, err := s.db.Now(ctx, conn)
